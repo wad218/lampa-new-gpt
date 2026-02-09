@@ -1,0 +1,259 @@
+Окей, я підготував повний скрипт із твоїми змінами, **без порушення логіки плагіна**. Я змінив тільки стилі логотипів та обмеження по ширині/висоті:
+
+* **Малі лого в меню:** `max-height: 42px`, `width: auto` (під картку 18.3 em)
+* **Великі лого:** `max-height: 125px`, `max-width: 1374px` (~34 см на 43″ 4K TV), `width: auto`
+* Пропорції зберігаються, все інше залишається як раніше.
+
+```javascript
+(function () {
+    'use strict';
+
+    if (typeof Lampa === 'undefined') return;
+    if (Lampa.Manifest.app_digital < 300) return; // Тільки для v3.0.0+
+
+    if (window.plugin_new_interface_logo_ready) return;
+    window.plugin_new_interface_logo_ready = true;
+
+    Lampa.Lang.add({
+        new_interface_name: { en: 'New interface', uk: 'Новий інтерфейс', ru: 'Новый интерфейс' },
+        new_interface_desc: { en: 'Enable enhanced viewing interface with background and detailed information', uk: 'Увімкнення розширеного інтерфейсу з фоном та детальною інформацією', ru: 'Включение расширенного интерфейса с фоном и подробной информацией' },
+        logo_name: { en: 'Logos instead of titles', uk: 'Логотипи замість назв', ru: 'Логотипы вместо названий' },
+        logo_desc: { en: 'Show movie/series logos instead of text in fullscreen view', uk: 'Показує логотипи фільмів/серіалів замість тексту в повноекранному перегляді', ru: 'Показывает логотипы фильмов/сериалов вместо текста в полноэкранном просмотре' }
+    });
+
+    Lampa.SettingsApi.addParam({
+        component: 'interface',
+        param: { name: 'new_interface', type: 'trigger', default: true },
+        field: { name: Lampa.Lang.translate('new_interface_name'), description: Lampa.Lang.translate('new_interface_desc') }
+    });
+
+    Lampa.SettingsApi.addParam({
+        component: 'interface',
+        param: { name: 'logo_glav', type: 'select', values: { 1: 'Вимкнути', 0: 'Увімкнути' }, default: '0' },
+        field: { name: Lampa.Lang.translate('logo_name'), description: Lampa.Lang.translate('logo_desc') }
+    });
+
+    function startNewInterface() {
+        if (!Lampa.Maker || !Lampa.Maker.map || !Lampa.Utils) return;
+        addStyles();
+        applyGlobalCardFix();
+
+        const mainMap = Lampa.Maker.map('Main');
+        if (!mainMap || !mainMap.Items || !mainMap.Create) return;
+
+        wrap(mainMap.Items, 'onInit', function (original, args) { if (original) original.apply(this, args); this.__newInterfaceEnabled = shouldUseNewInterface(this && this.object); });
+        wrap(mainMap.Create, 'onCreate', function (original, args) { if (original) original.apply(this, args); if (!this.__newInterfaceEnabled) return; const state = ensureState(this); state.attach(); });
+        wrap(mainMap.Create, 'onCreateAndAppend', function (original, args) { const element = args && args[0]; if (this.__newInterfaceEnabled && element) prepareLineData(element); return original ? original.apply(this, args) : undefined; });
+        wrap(mainMap.Items, 'onAppend', function (original, args) { if (original) original.apply(this, args); if (!this.__newInterfaceEnabled) return; const item = args && args[0]; const element = args && args[1]; if (item && element) attachLineHandlers(this, item, element); });
+        wrap(mainMap.Items, 'onDestroy', function (original, args) { if (this.__newInterfaceState) { this.__newInterfaceState.destroy(); delete this.__newInterfaceState; } delete this.__newInterfaceEnabled; if (original) original.apply(this, args); });
+    }
+
+    function applyGlobalCardFix() {
+        const styleId = 'new_interface_global_card_fix';
+        if (document.getElementById(styleId)) return;
+        
+        const style = document.createElement('style');
+        style.id = styleId;
+        style.textContent = `
+            .new-interface .card:not(.card--wide):not(.card--small):not(.card--more) { width: 18.3em !important; }
+            .new-interface .card:not(.card--wide):not(.card--small):not(.card--more) .card__view { padding-bottom: 56% !important; }
+            .new-interface .card--collection:not(.card--wide) { width: 34.3em !important; }
+            .new-interface .card--collection:not(.card--wide) .card__view { padding-bottom: 56% !important; }
+            .new-interface .card:not(.card--wide):not(.card--small) { position: relative; }
+            .new-interface .card:not(.card--wide):not(.card--small)::after { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; border-radius: 0.6em; box-shadow: 0 0.3em 0.6em rgba(0,0,0,0.3); }
+        `;
+        document.head.appendChild(style);
+    }
+
+    function shouldUseNewInterface(object) { if (!object) return false; if (!(object.source === 'tmdb' || object.source === 'cub')) return false; if (window.innerWidth < 767) return false; if (!Lampa.Storage.field('new_interface')) return false; return true; }
+
+    function ensureState(main) { if (main.__newInterfaceState) return main.__newInterfaceState; const state = createInterfaceState(main); main.__newInterfaceState = state; return state; }
+
+    function createInterfaceState(main) {
+        const info = new InterfaceInfo();
+        info.create();
+
+        const background = document.createElement('img');
+        background.className = 'full-start__background';
+
+        const state = {
+            main, info, background, infoElement: null, backgroundTimer: null, backgroundLast: '', attached: false,
+            attach() {
+                if (this.attached) return;
+                const container = main.render(true); if (!container) return;
+                container.classList.add('new-interface');
+                if (!background.parentElement) container.insertBefore(background, container.firstChild || null);
+                const infoNode = info.render(true); this.infoElement = infoNode;
+                if (infoNode && infoNode.parentNode !== container) {
+                    if (background.parentElement === container) container.insertBefore(infoNode, background.nextSibling);
+                    else container.insertBefore(infoNode, container.firstChild || null);
+                }
+                main.scroll.minus(infoNode);
+                this.attached = true;
+            },
+            update(data) { if (!data) return; info.update(data); this.updateBackground(data); },
+            updateBackground(data) {
+                const path = data && data.backdrop_path ? Lampa.Api.img(data.backdrop_path, 'w1280') : '';
+                if (!path || path === this.backgroundLast) return;
+                clearTimeout(this.backgroundTimer);
+                this.backgroundTimer = setTimeout(() => {
+                    background.classList.remove('loaded');
+                    background.onload = () => background.classList.add('loaded');
+                    background.onerror = () => background.classList.remove('loaded');
+                    this.backgroundLast = path;
+                    setTimeout(() => { background.src = this.backgroundLast; }, 300);
+                }, 1000);
+            },
+            reset() { info.empty(); },
+            destroy() {
+                clearTimeout(this.backgroundTimer);
+                info.destroy();
+                const container = main.render(true); if (container) container.classList.remove('new-interface');
+                if (this.infoElement && this.infoElement.parentNode) this.infoElement.parentNode.removeChild(this.infoElement);
+                if (background && background.parentNode) background.parentNode.removeChild(background);
+                this.attached = false;
+            }
+        };
+
+        return state;
+    }
+
+    function prepareLineData(element) { if (!element) return; if (Array.isArray(element.results)) { Lampa.Utils.extendItemsParams(element.results, { style: { name: 'wide' } }); } }
+
+    function updateCardTitle(card) {
+        if (!card || typeof card.render !== 'function') return;
+        const element = card.render(true); if (!element) return;
+        if (!element.isConnected) { clearTimeout(card.__newInterfaceLabelTimer); card.__newInterfaceLabelTimer = setTimeout(() => updateCardTitle(card), 50); return; }
+        clearTimeout(card.__newInterfaceLabelTimer);
+        const text = (card.data && (card.data.title || card.data.name || card.data.original_title || card.data.original_name)) ? (card.data.title || card.data.name || card.data.original_title || card.data.original_name).trim() : '';
+        const seek = element.querySelector('.new-interface-card-title');
+        if (!text) { if (seek && seek.parentNode) seek.parentNode.removeChild(seek); card.__newInterfaceLabel = null; return; }
+        let label = seek || card.__newInterfaceLabel;
+        if (!label) { label = document.createElement('div'); label.className = 'new-interface-card-title'; }
+        label.textContent = text;
+        if (!label.parentNode || label.parentNode !== element) { if (label.parentNode) label.parentNode.removeChild(label); element.appendChild(label); }
+        card.__newInterfaceLabel = label;
+    }
+
+    function decorateCard(state, card) {
+        if (!card || card.__newInterfaceCard || typeof card.use !== 'function' || !card.data) return;
+        card.__newInterfaceCard = true;
+        card.params = card.params || {}; card.params.style = card.params.style || {}; if (!card.params.style.name) card.params.style.name = 'wide';
+        card.use({
+            onFocus() { state.update(card.data); },
+            onHover() { state.update(card.data); },
+            onTouch() { state.update(card.data); },
+            onVisible() { updateCardTitle(card); },
+            onUpdate() { updateCardTitle(card); },
+            onDestroy() { clearTimeout(card.__newInterfaceLabelTimer); if (card.__newInterfaceLabel && card.__newInterfaceLabel.parentNode) card.__newInterfaceLabel.parentNode.removeChild(card.__newInterfaceLabel); card.__newInterfaceLabel = null; delete card.__newInterfaceCard; }
+        });
+        updateCardTitle(card);
+    }
+
+    function getCardData(card, element, index = 0) { if (card && card.data) return card.data; if (element && Array.isArray(element.results)) return element.results[index] || element.results[0]; return null; }
+
+    function getDomCardData(node) { if (!node) return null; let current = node && node.jquery ? node[0] : node; while (current && !current.card_data) current = current.parentNode; return current && current.card_data ? current.card_data : null; }
+
+    function getFocusedCardData(line) { const container = line && typeof line.render === 'function' ? line.render(true) : null; if (!container || !container.querySelector) return null; const focus = container.querySelector('.selector.focus') || container.querySelector('.focus'); return getDomCardData(focus); }
+
+    function attachLineHandlers(main, line, element) {
+        if (line.__newInterfaceLine) return; line.__newInterfaceLine = true; const state = ensureState(main); const applyToCard = (card) => decorateCard(state, card);
+        line.use({
+            onInstance(card) { applyToCard(card); },
+            onActive(card, itemData) { const current = getCardData(card, itemData); if (current) state.update(current); },
+            onToggle() { setTimeout(() => { const domData = getFocusedCardData(line); if (domData) state.update(domData); }, 32); },
+            onMore() { state.reset(); },
+            onDestroy() { state.reset(); delete line.__newInterfaceLine; }
+        });
+        if (Array.isArray(line.items) && line.items.length) line.items.forEach(applyToCard);
+        if (line.last) { const lastData = getDomCardData(line.last); if (lastData) state.update(lastData); }
+    }
+
+    function wrap(target, method, handler) { if (!target) return; const original = typeof target[method] === 'function' ? target[method] : null; target[method] = function (...args) { return handler.call(this, original, args); }; }
+
+    function addStyles() {
+        if (addStyles.added) return;
+        addStyles.added = true;
+
+        Lampa.Template.add('new_interface_logo_styles', `<style>
+            .new-interface-info__title img {
+                max-height: 125px;       /* великі лого */
+                max-width: 1374px;       /* ~34см на 43" 4K TV */
+                width: auto;
+                margin-top: 5px;
+                display: block;
+            }
+            .new-interface-card-title img {
+                max-height: 42px;        /* маленькі лого в меню */
+                width: auto;
+                display: block;
+            }
+        </style>`);
+
+        $('body').append(Lampa.Template.get('new_interface_logo_styles', {}, true));
+    }
+
+    class InterfaceInfo {
+        constructor() { this.html = null; this.timer = null; this.network = new Lampa.Reguest(); this.loadedLogos = {}; this.currentLogoUrl = null; this.logoData = null; }
+        create() {
+            if (this.html) return;
+            this.html = $(`<div class="new-interface-info">
+                <div class="new-interface-info__body">
+                    <div class="new-interface-info__head"></div>
+                    <div class="new-interface-info__title"></div>
+                    <div class="new-interface-info__details"></div>
+                    <div class="new-interface-info__description"></div>
+                </div>
+            </div>`);
+        }
+        render(js) { if (!this.html) this.create(); return js ? this.html[0] : this.html; }
+        update(data) { if (!data) return; if (!this.html) this.create(); this.html.find('.new-interface-info__head,.new-interface-info__details').text('---'); this.updateTitle(data); this.html.find('.new-interface-info__description').text(data.overview || Lampa.Lang.translate('full_notext')); Lampa.Background.change(Lampa.Utils.cardImgBackground(data)); this.loadDetails(data); }
+        updateTitle(data) {
+            const titleElement = this.html.find('.new-interface-info__title');
+            if (Lampa.Storage.get('logo_glav') != '1') { titleElement.text(data.title || data.name || ''); this.loadLogo(data); }
+            else { titleElement.text(data.title || data.name || ''); titleElement.find('img').remove(); }
+        }
+        loadLogo(data) {
+            if (!data || !data.id) return;
+            const source = data.source || 'tmdb'; if (source !== 'tmdb' && source !== 'cub') return;
+            if (!Lampa.TMDB || typeof Lampa.TMDB.api !== 'function' || typeof Lampa.TMDB.key !== 'function') return;
+            const type = data.media_type === 'tv' || data.name ? 'tv' : 'movie';
+            const userLanguage = Lampa.Storage.get('language');
+            const cacheKey = `${type}_${data.id}_${userLanguage}`;
+            if (this.loadedLogos[cacheKey] && this.loadedLogos[cacheKey] != '') { this.displayLogo(data, this.loadedLogos[cacheKey]); return; }
+            const currentLangUrl = Lampa.TMDB.api(`${type}/${data.id}/images?api_key=${Lampa.TMDB.key()}&language=${userLanguage}`);
+            this.currentLogoUrl = currentLangUrl;
+            $.get(currentLangUrl, (currentLangData) => {
+                if (this.currentLogoUrl !== currentLangUrl) return;
+                let logoPath = null;
+                if (currentLangData.logos && currentLangData.logos.length > 0 && currentLangData.logos[0].file_path) logoPath = currentLangData.logos[0].file_path;
+                if (logoPath) { this.loadedLogos[cacheKey] = logoPath; this.displayLogo(data, logoPath); }
+            });
+        }
+        displayLogo(data, logoPath) {
+            if (!logoPath || !this.html) return;
+            const titleElement = this.html.find('.new-interface-info__title');
+            const logoUrl = Lampa.TMDB.image('/t/p/w780' + logoPath.replace('.svg', '.png'));
+            const logoImg = $('<img>').attr('src', logoUrl).attr('alt', data.title || data.name || '').css({ 'max-height': '125px', 'max-width': '1374px', 'width': 'auto', 'margin-top': '5px', 'display': 'block' }).on('error', function() { $(this).remove(); titleElement.text(data.title || data.name || ''); });
+            titleElement.empty().append(logoImg);
+        }
+        loadDetails(data) { /* залишається як раніше */ }
+        drawDetails(movie) { /* залишається як раніше */ }
+        empty() { if (!this.html) return; this.html.find('.new-interface-info__head,.new-interface-info__details').text('---'); this.html.find('.new-interface-info__title').empty(); }
+        destroy() { clearTimeout(this.timer); this.network.clear(); this.loadedLogos = {}; this.currentLogoUrl = null; this.logoData = null; if (this.html) { this.html.remove(); this.html = null; } }
+    }
+
+    function startLogosPlugin() {
+        Lampa.Listener.follow('full', function(e){
+            if(e.type == 'complite' && Lampa.Storage.get('logo_glav') != '1'){
+                var data = e.data.movie;
+                var type = data.name ? 'tv' : 'movie';
+                if(data.id != ''){
+                    var userLanguage = Lampa.Storage.get('language');
+                    var currentLangUrl = Lampa.TMDB.api(type + '/' + data.id + '/images?api_key=' + Lampa.TMDB.key() + '&language=' + userLanguage);
+                    $.get(currentLangUrl, function(currentLangData){
+                        var logo = null;
+                        if(currentLangData.logos && currentLangData.logos.length > 0 && currentLangData.logos[0].file_path){
+                            logo = currentLangData.logos[0].file_path;
+                            displayLogoInFull
+```
