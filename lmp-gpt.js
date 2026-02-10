@@ -753,6 +753,7 @@
                 .attr('alt', data.title || data.name || '')
                 .css({
                     'max-height': '42px',
+                    'max-width': '240px',
                     'margin-top': '5px',
                     'display': 'block'
                 })
@@ -909,6 +910,7 @@
     startLogosPlugin();
 
 })();
+
 
 
 
