@@ -899,7 +899,7 @@
     
     function displayLogoInFullView(e, logoPath){
         if(logoPath != ''){
-            e.object.activity.render().find('.full-start-new__title').html('<img style="margin-top:5px;max-width:350px;max-height:125px;" src="' + Lampa.TMDB.image('/t/p/w780' + logoPath.replace('.svg','.png')) + '"/>');
+            e.object.activity.render().find('.full-start-new__title').html('<img style="margin-top:5px;max-width:330px;max-height:120px;" src="' + Lampa.TMDB.image('/t/p/w780' + logoPath.replace('.svg','.png')) + '"/>');
         }
     }
 
@@ -910,6 +910,7 @@
     startLogosPlugin();
 
 })();
+
 
 
 
