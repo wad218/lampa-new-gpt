@@ -801,50 +801,51 @@
             if (!movie || !this.html) return;
 
             const create = ((movie.release_date || movie.first_air_date || '0000') + '').slice(0, 4);
-            const vote = parseFloat((movie.vote_average || 0) + '').toFixed(1);
+            
             const head = [];
             const details = [];
-            const sources = Lampa.Api && Lampa.Api.sources && Lampa.Api.sources.tmdb ? Lampa.Api.sources.tmdb : null;
-            const countries = sources && typeof sources.parseCountries === 'function' ? sources.parseCountries(movie) : [];
-            const pg = sources && typeof sources.parsePG === 'function' ? sources.parsePG(movie) : '';
+            
+            let vote = null;
+            let source = 'tmdb';
+ 
+// Якщо IMDb плагін вже додав imdb_rating або imdb_display
+if (movie.imdb_rating) {
+    vote = parseFloat(movie.imdb_rating).toFixed(1);
+    source = 'imdb';
+} 
+else if (movie.imdb_display) {
+    vote = parseFloat(movie.imdb_display).toFixed(1);
+    source = 'imdb';
+} 
+else if (movie.vote_average) {
+    vote = parseFloat(movie.vote_average).toFixed(1);
+    source = 'tmdb';
+}
 
-            if (create !== '0000') head.push(`<span>${create}</span>`);
-            if (countries && countries.length) head.push(countries.join(', '));
+if (vote && parseFloat(vote) > 0) {
 
-            if (vote > 0) {
-                details.push(`<div class="full-start__rate"><div>${vote}</div><div>TMDB</div></div>`);
-            }
-
-            if (Array.isArray(movie.genres) && movie.genres.length) {
-                details.push(movie.genres.map((item) => Lampa.Utils.capitalizeFirstLetter(item.name)).join(' | '));
-            }
-
-            if (movie.runtime) details.push(Lampa.Utils.secondsToTime(movie.runtime * 60, true));
-            if (pg) details.push(`<span class="full-start__pg" style="font-size: 0.9em;">${pg}</span>`);
-
-            this.html.find('.new-interface-info__head').empty().append(head.join(', '));
-            this.html.find('.new-interface-info__details').html(details.join('<span class="new-interface-info__split">&#9679;</span>'));
-        }
-
-        empty() {
-            if (!this.html) return;
-            this.html.find('.new-interface-info__head,.new-interface-info__details').text('---');
-            this.html.find('.new-interface-info__title').empty();
-        }
-
-        destroy() {
-            clearTimeout(this.timer);
-            this.network.clear();
-            this.loadedLogos = {};
-            this.currentUrl = null;
-            this.currentLogoUrl = null;
-
-            if (this.html) {
-                this.html.remove();
-                this.html = null;
-            }
-        }
+    if (source === 'imdb') {
+        details.push(`
+            <div class="full-start__rate rate--imdb">
+                <div>${vote}</div>
+                <div class="source--name">
+                    <img src="https://raw.githubusercontent.com/wad218/lmp-rtg/main/wwwroot/imdb.png" 
+                         style="height:18px;">
+                </div>
+            </div>
+        `);
+    } else {
+        details.push(`
+            <div class="full-start__rate rate--tmdb">
+                <div>${vote}</div>
+                <div class="source--name">
+                    <img src="https://raw.githubusercontent.com/wad218/lmp-rtg/main/wwwroot/tmdb.png" 
+                         style="height:18px;">
+                </div>
+            </div>
+        `);
     }
+}
 
     // ========== ЛОГІКА ЛОГОТИПІВ ДЛЯ СТАНДАРТНОГО ПОВНОЕКРАННОГО ПЕРЕГЛЯДУ ==========
 
