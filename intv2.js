@@ -798,7 +798,6 @@
         }
 
         drawDetails(movie) {
-        drawDetails(movie) {
     if (!movie || !this.html) return;
 
     const create = ((movie.release_date || movie.first_air_date || '0000') + '').slice(0, 4);
