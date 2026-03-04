@@ -809,7 +809,7 @@
     if (create !== '0000') head.push(`<span>${create}</span>`);
 
     let vote = null;
-    let source = 'tmdb';
+    let source = 'imdb';
 
     // IMDb якщо є
     if (movie.imdb_rating) {
