@@ -809,7 +809,7 @@
     if (create !== '0000') head.push(`<span>${create}</span>`);
 
     let vote = null;
-    let source = null;
+    let source = 'imdb';
 
 // 1️⃣ Пріоритет IMDb
 if (movie.imdb_rating) {
