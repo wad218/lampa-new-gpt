@@ -809,21 +809,44 @@
     if (create !== '0000') head.push(`<span>${create}</span>`);
 
     let vote = null;
-    let source = 'tmdb';
+    let source = null;
 
-    // IMDb якщо є
-    if (movie.imdb_rating) {
-        vote = parseFloat(movie.imdb_rating).toFixed(1);
-        source = 'imdb';
-    } 
-    else if (movie.imdb_display) {
-        vote = parseFloat(movie.imdb_display).toFixed(1);
-        source = 'imdb';
-    } 
-    else if (movie.vote_average) {
-        vote = parseFloat(movie.vote_average).toFixed(1);
-        source = 'tmdb';
-    }
+// 1️⃣ Пріоритет IMDb
+if (movie.imdb_rating) {
+    vote = parseFloat(movie.imdb_rating).toFixed(1);
+    source = 'imdb';
+}
+else if (movie.imdb_display) {
+    vote = parseFloat(movie.imdb_display).toFixed(1);
+    source = 'imdb';
+}
+
+// 2️⃣ Якщо IMDb ще немає — даємо час йому підвантажитись
+if (!vote) {
+
+    setTimeout(() => {
+
+        if (movie.imdb_rating || movie.imdb_display) {
+            this.drawDetails(movie); // перерендер коли IMDb зʼявиться
+        }
+        else if (movie.vote_average) {
+            this.drawDetails({
+                ...movie,
+                imdb_rating: null,
+                vote_average: movie.vote_average
+            });
+        }
+
+    }, 400);
+
+    return; // не показуємо TMDB одразу
+}
+
+// 3️⃣ Якщо все ж fallback
+if (!vote && movie.vote_average) {
+    vote = parseFloat(movie.vote_average).toFixed(1);
+    source = 'tmdb';
+}
 
     if (vote && parseFloat(vote) > 0) {
 
