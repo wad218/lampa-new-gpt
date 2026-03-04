@@ -798,55 +798,68 @@
         }
 
         drawDetails(movie) {
-            if (!movie || !this.html) return;
+        drawDetails(movie) {
+    if (!movie || !this.html) return;
 
-            const create = ((movie.release_date || movie.first_air_date || '0000') + '').slice(0, 4);
-            
-            const head = [];
-            const details = [];
-            
-            let vote = null;
-            let source = 'tmdb';
- 
-// Якщо IMDb плагін вже додав imdb_rating або imdb_display
-if (movie.imdb_rating) {
-    vote = parseFloat(movie.imdb_rating).toFixed(1);
-    source = 'imdb';
-} 
-else if (movie.imdb_display) {
-    vote = parseFloat(movie.imdb_display).toFixed(1);
-    source = 'imdb';
-} 
-else if (movie.vote_average) {
-    vote = parseFloat(movie.vote_average).toFixed(1);
-    source = 'tmdb';
-}
+    const create = ((movie.release_date || movie.first_air_date || '0000') + '').slice(0, 4);
 
-if (vote && parseFloat(vote) > 0) {
+    const head = [];
+    const details = [];
 
-    if (source === 'imdb') {
-        details.push(`
-            <div class="full-start__rate rate--imdb">
-                <div>${vote}</div>
-                <div class="source--name">
-                    <img src="https://raw.githubusercontent.com/wad218/lmp-rtg/main/wwwroot/imdb.png" 
-                         style="height:18px;">
-                </div>
-            </div>
-        `);
-    } else {
-        details.push(`
-            <div class="full-start__rate rate--tmdb">
-                <div>${vote}</div>
-                <div class="source--name">
-                    <img src="https://raw.githubusercontent.com/wad218/lmp-rtg/main/wwwroot/tmdb.png" 
-                         style="height:18px;">
-                </div>
-            </div>
-        `);
+    // Рік
+    if (create !== '0000') head.push(`<span>${create}</span>`);
+
+    let vote = null;
+    let source = 'tmdb';
+
+    // IMDb якщо є
+    if (movie.imdb_rating) {
+        vote = parseFloat(movie.imdb_rating).toFixed(1);
+        source = 'imdb';
+    } 
+    else if (movie.imdb_display) {
+        vote = parseFloat(movie.imdb_display).toFixed(1);
+        source = 'imdb';
+    } 
+    else if (movie.vote_average) {
+        vote = parseFloat(movie.vote_average).toFixed(1);
+        source = 'tmdb';
     }
-}
 
+    if (vote && parseFloat(vote) > 0) {
+
+        if (source === 'imdb') {
+            details.push(`
+                <div class="full-start__rate rate--imdb">
+                    <div>${vote}</div>
+                    <div class="source--name">
+                        <img src="https://raw.githubusercontent.com/wad218/lmp-rtg/main/wwwroot/imdb.png"
+                             style="height:18px;">
+                    </div>
+                </div>
+            `);
+        } else {
+            details.push(`
+                <div class="full-start__rate rate--tmdb">
+                    <div>${vote}</div>
+                    <div class="source--name">
+                        <img src="https://raw.githubusercontent.com/wad218/lmp-rtg/main/wwwroot/tmdb.png"
+                             style="height:18px;">
+                    </div>
+                </div>
+            `);
+        }
+    }
+
+    // Вставка в DOM
+    this.html.find('.new-interface-info__head')
+        .empty()
+        .append(head.join(', '));
+
+    this.html.find('.new-interface-info__details')
+        .html(details.join('<span class="new-interface-info__split">&#9679;</span>'));
+}
+            
     // ========== ЛОГІКА ЛОГОТИПІВ ДЛЯ СТАНДАРТНОГО ПОВНОЕКРАННОГО ПЕРЕГЛЯДУ ==========
 
     function startLogosPlugin() {
