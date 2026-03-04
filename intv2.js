@@ -622,6 +622,7 @@
             this.loadedLogos = {}; // Кеш логотипів
             this.currentLogoUrl = null;
             this.logoData = null;
+            this.imdbCache = {};
         }
 
         create() {
