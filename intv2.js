@@ -1,6 +1,8 @@
 (function () {
     'use strict';
 
+    const OMDB_API_KEY = '7d0a0115';
+
     if (typeof Lampa === 'undefined') return;
     if (Lampa.Manifest.app_digital < 300) return; // Тільки для v3.0.0+
 
@@ -776,8 +778,7 @@
 
             const type = data.media_type === 'tv' || data.name ? 'tv' : 'movie';
             const language = Lampa.Storage.get('language');
-            const url = Lampa.TMDB.api(`${type}/${data.id}?api_key=${Lampa.TMDB.key()}&append_to_response=content_ratings,release_dates&language=${language}`);
-
+            const url = Lampa.TMDB.api(`${type}/${data.id}?api_key=${Lampa.TMDB.key()}&append_to_response=content_ratings,release_dates,external_ids&language=${language}`);
             this.currentUrl = url;
 
             if (this.loadedLogos[url]) {
@@ -809,56 +810,73 @@
     if (create !== '0000') head.push(`<span>${create}</span>`);
 
     let vote = null;
-    let source = 'imdb';
+let source = null;
 
-    // IMDb якщо є
-    if (movie.imdb_rating) {
-        vote = parseFloat(movie.imdb_rating).toFixed(1);
-        source = 'imdb';
-    } 
-    else if (movie.imdb_display) {
-        vote = parseFloat(movie.imdb_display).toFixed(1);
-        source = 'imdb';
-    } 
-    else if (movie.vote_average) {
+const imdbId = movie.external_ids && movie.external_ids.imdb_id;
+
+if (imdbId) {
+
+    const self = this;
+
+    $.get(`https://www.omdbapi.com/?i=${imdbId}&apikey=${OMDB_API_KEY}`, function(res){
+
+        if (res && res.imdbRating && res.imdbRating !== 'N/A') {
+
+            vote = parseFloat(res.imdbRating).toFixed(1);
+            source = 'imdb';
+
+        } else if (movie.vote_average) {
+
+            vote = parseFloat(movie.vote_average).toFixed(1);
+            source = 'tmdb';
+        }
+
+        renderVote();
+
+    });
+
+} else {
+
+    if (movie.vote_average) {
         vote = parseFloat(movie.vote_average).toFixed(1);
         source = 'tmdb';
+        renderVote();
     }
 
-    if (vote && parseFloat(vote) > 0) {
+}
 
-        if (source === 'imdb') {
-            details.push(`
-                <div class="full-start__rate rate--imdb">
-                    <div>${vote}</div>
-                    <div class="source--name">
-                        <img src="https://raw.githubusercontent.com/wad218/lmp-rtg/main/wwwroot/imdb.png"
-                             style="height:18px;">
-                    </div>
+const renderVote = () => {
+
+    if (!vote) return;
+
+    if (source === 'imdb') {
+
+        details.push(`
+            <div class="full-start__rate rate--imdb">
+                <div>${vote}</div>
+                <div class="source--name">
+                    <img src="https://raw.githubusercontent.com/wad218/lmp-rtg/main/wwwroot/imdb.png" style="height:18px;">
                 </div>
-            `);
-        } else {
-            details.push(`
-                <div class="full-start__rate rate--tmdb">
-                    <div>${vote}</div>
-                    <div class="source--name">
-                        <img src="https://raw.githubusercontent.com/wad218/lmp-rtg/main/wwwroot/tmdb.png"
-                             style="height:18px;">
-                    </div>
+            </div>
+        `);
+
+    } else {
+
+        details.push(`
+            <div class="full-start__rate rate--tmdb">
+                <div>${vote}</div>
+                <div class="source--name">
+                    <img src="https://raw.githubusercontent.com/wad218/lmp-rtg/main/wwwroot/tmdb.png" style="height:18px;">
                 </div>
-            `);
-        }
+            </div>
+        `);
+
     }
 
-    // Вставка в DOM
-    this.html.find('.new-interface-info__head')
-        .empty()
-        .append(head.join(', '));
-
-    this.html.find('.new-interface-info__details')
-    .html(details.join('<span class="new-interface-info__split">&#9679;</span>'));
-        }
-    }            
+    self.html.find('.new-interface-info__details')
+        .html(details.join('<span class="new-interface-info__split">&#9679;</span>'));
+}; 
+            
     // ========== ЛОГІКА ЛОГОТИПІВ ДЛЯ СТАНДАРТНОГО ПОВНОЕКРАННОГО ПЕРЕГЛЯДУ ==========
 
     function startLogosPlugin() {
