@@ -848,36 +848,88 @@ if (imdbId) {
 
 const renderVote = () => {
 
-    if (!vote) return;
+drawDetails(movie) {
+    if (!movie || !this.html) return;
 
-    if (source === 'imdb') {
+    const create = ((movie.release_date || movie.first_air_date || '0000') + '').slice(0, 4);
 
-        details.push(`
-            <div class="full-start__rate rate--imdb">
-                <div>${vote}</div>
-                <div class="source--name">
-                    <img src="https://raw.githubusercontent.com/wad218/lmp-rtg/main/wwwroot/imdb.png" style="height:18px;">
+    const head = [];
+    const details = [];
+
+    if (create !== '0000') head.push(`<span>${create}</span>`);
+
+    let vote = null;
+    let source = null;
+    const self = this;
+
+    const renderVote = function () {
+
+        if (!vote) return;
+
+        if (source === 'imdb') {
+
+            details.push(`
+                <div class="full-start__rate rate--imdb">
+                    <div>${vote}</div>
+                    <div class="source--name">
+                        <img src="https://raw.githubusercontent.com/wad218/lmp-rtg/main/wwwroot/imdb.png" style="height:18px;">
+                    </div>
                 </div>
-            </div>
-        `);
+            `);
+
+        } else {
+
+            details.push(`
+                <div class="full-start__rate rate--tmdb">
+                    <div>${vote}</div>
+                    <div class="source--name">
+                        <img src="https://raw.githubusercontent.com/wad218/lmp-rtg/main/wwwroot/tmdb.png" style="height:18px;">
+                    </div>
+                </div>
+            `);
+
+        }
+
+        self.html.find('.new-interface-info__details')
+            .html(details.join('<span class="new-interface-info__split">&#9679;</span>'));
+    };
+
+    const imdbId = movie.external_ids && movie.external_ids.imdb_id;
+
+    if (imdbId) {
+
+        $.get(`https://www.omdbapi.com/?i=${imdbId}&apikey=${OMDB_API_KEY}`, function(res){
+
+            if (res && res.imdbRating && res.imdbRating !== 'N/A') {
+
+                vote = parseFloat(res.imdbRating).toFixed(1);
+                source = 'imdb';
+
+            } else if (movie.vote_average) {
+
+                vote = parseFloat(movie.vote_average).toFixed(1);
+                source = 'tmdb';
+            }
+
+            renderVote();
+
+        });
 
     } else {
 
-        details.push(`
-            <div class="full-start__rate rate--tmdb">
-                <div>${vote}</div>
-                <div class="source--name">
-                    <img src="https://raw.githubusercontent.com/wad218/lmp-rtg/main/wwwroot/tmdb.png" style="height:18px;">
-                </div>
-            </div>
-        `);
+        if (movie.vote_average) {
+
+            vote = parseFloat(movie.vote_average).toFixed(1);
+            source = 'tmdb';
+            renderVote();
+        }
 
     }
 
-    self.html.find('.new-interface-info__details')
-        .html(details.join('<span class="new-interface-info__split">&#9679;</span>'));
-} 
-        }           
+    this.html.find('.new-interface-info__head')
+        .empty()
+        .append(head.join(', '));
+}           
     // ========== ЛОГІКА ЛОГОТИПІВ ДЛЯ СТАНДАРТНОГО ПОВНОЕКРАННОГО ПЕРЕГЛЯДУ ==========
 
     function startLogosPlugin() {
