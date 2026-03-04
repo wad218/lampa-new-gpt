@@ -811,7 +811,7 @@
     if (create !== '0000') head.push(`<span>${create}</span>`);
 
     let vote = null;
-let source = null;
+    let source = null;
 
 const imdbId = movie.external_ids && movie.external_ids.imdb_id;
 
@@ -876,8 +876,8 @@ const renderVote = () => {
 
     self.html.find('.new-interface-info__details')
         .html(details.join('<span class="new-interface-info__split">&#9679;</span>'));
-}; 
-            
+} 
+        }           
     // ========== ЛОГІКА ЛОГОТИПІВ ДЛЯ СТАНДАРТНОГО ПОВНОЕКРАННОГО ПЕРЕГЛЯДУ ==========
 
     function startLogosPlugin() {
