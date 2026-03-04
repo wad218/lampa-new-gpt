@@ -823,7 +823,7 @@
                 <div class="full-start__rate rate--imdb">
                     <div>${vote}</div>
                     <div class="source--name">
-                        <img src="https://raw.githubusercontent.com/wad218/lmp-rtg/main/wwwroot/imdb.png" style="height:18px;">
+                        <img src="https://raw.githubusercontent.com/wad218/lmp-rtg/main/wwwroot/imdb.png" style="height:20px;">
                     </div>
                 </div>
             `);
@@ -834,7 +834,7 @@
                 <div class="full-start__rate rate--tmdb">
                     <div>${vote}</div>
                     <div class="source--name">
-                        <img src="https://raw.githubusercontent.com/wad218/lmp-rtg/main/wwwroot/tmdb.png" style="height:18px;">
+                        <img src="https://raw.githubusercontent.com/wad218/lmp-rtg/main/wwwroot/tmdb.png" style="height:20px;">
                     </div>
                 </div>
             `);
