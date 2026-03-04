@@ -876,7 +876,8 @@
     this.html.find('.new-interface-info__head')
         .empty()
         .append(head.join(', '));
-}           
+}
+        }
     // ========== ЛОГІКА ЛОГОТИПІВ ДЛЯ СТАНДАРТНОГО ПОВНОЕКРАННОГО ПЕРЕГЛЯДУ ==========
 
     function startLogosPlugin() {
