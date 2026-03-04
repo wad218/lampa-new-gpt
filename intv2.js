@@ -834,7 +834,7 @@
                 <div class="full-start__rate rate--tmdb">
                     <div>${vote}</div>
                     <div class="source--name">
-                        <img src="https://raw.githubusercontent.com/wad218/lmp-rtg/main/wwwroot/tmdb.svg" style="height:20px; max-width:40px;">
+                        <img src="https://raw.githubusercontent.com/wad218/lmp-rtg/main/wwwroot/tmdb.svg" style="height:20px; width:40px;">
                     </div>
                 </div>
             `);
