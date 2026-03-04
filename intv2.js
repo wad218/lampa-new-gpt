@@ -856,9 +856,9 @@
         .append(head.join(', '));
 
     this.html.find('.new-interface-info__details')
-        .html(details.join('<span class="new-interface-info__split">&#9679;</span>'));
-}
-            
+    .html(details.join('<span class="new-interface-info__split">&#9679;</span>'));
+        }
+    }            
     // ========== ЛОГІКА ЛОГОТИПІВ ДЛЯ СТАНДАРТНОГО ПОВНОЕКРАННОГО ПЕРЕГЛЯДУ ==========
 
     function startLogosPlugin() {
