@@ -851,10 +851,10 @@ if (imdbId) {
 
     $.get(`https://mdblist.com/api/?apikey=${MDBLIST_API_KEY}&i=${imdbId}`, function(res){
 
-        if (res && res.ratings && res.ratings.imdb) {
+        if (res && (res.imdb_rating || (res.score && res.score.imdb))) {
 
-            vote = parseFloat(res.ratings.imdb).toFixed(1);
-            source = 'imdb';
+    vote = parseFloat(res.imdb_rating || res.score.imdb).toFixed(1);
+    source = 'imdb';
 
         } else if (movie.vote_average) {
 
