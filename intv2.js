@@ -851,16 +851,20 @@ if (imdbId) {
 
     $.get(`https://api.mdblist.com/?apikey=${MDBLIST_API_KEY}&i=${imdbId}`, function(res){
 
-        if (res && (res.imdb_rating || (res.score && res.score.imdb))) {
+       if (res && res.ratings && res.ratings.length) {
 
-    vote = parseFloat(res.imdb_rating || res.score.imdb).toFixed(1);
-    source = 'imdb';
+        const imdbRating = res.ratings.find(r => r.source === 'imdb');
 
-        } else if (movie.vote_average) {
-
-            vote = parseFloat(movie.vote_average).toFixed(1);
-            source = 'tmdb';
+        if (imdbRating && imdbRating.value) {
+            vote = parseFloat(imdbRating.value).toFixed(1);
+            source = 'imdb';
         }
+    }
+
+    if (!vote && movie.vote_average) {
+        vote = parseFloat(movie.vote_average).toFixed(1);
+        source = 'tmdb';
+    }
 
             renderVote();
 
