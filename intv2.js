@@ -2,6 +2,33 @@
     'use strict';
 
     const MDBLIST_API_KEY = 'glu1fx0dz20smg0myphf4vfpj';
+    const MDBLIST_CACHE_KEY = 'mdblist_rating_cache';
+const MDBLIST_CACHE_TIME = 3 * 24 * 60 * 60 * 1000; // 3 дні
+
+function getCachedMDBRating(id){
+
+    const cache = Lampa.Storage.get(MDBLIST_CACHE_KEY, {});
+
+    if(!cache[id]) return null;
+
+    const item = cache[id];
+
+    if(Date.now() - item.time > MDBLIST_CACHE_TIME) return null;
+
+    return item.value;
+}
+
+function saveCachedMDBRating(id, value){
+
+    const cache = Lampa.Storage.get(MDBLIST_CACHE_KEY, {});
+
+    cache[id] = {
+        value: value,
+        time: Date.now()
+    };
+
+    Lampa.Storage.set(MDBLIST_CACHE_KEY, cache);
+}
 
     if (typeof Lampa === 'undefined') return;
     if (Lampa.Manifest.app_digital < 300) return; // Тільки для v3.0.0+
@@ -847,8 +874,17 @@
 
     const imdbId = movie.external_ids && movie.external_ids.imdb_id;
 const type = movie.name ? 'show' : 'movie';
+            const cachedRating = getCachedMDBRating(movie.id);
 
-if (imdbId) {
+if(cachedRating){
+
+    vote = cachedRating;
+    source = 'imdb';
+    renderVote();
+
+}
+
+else if (imdbId) {
 
     $.get(`https://api.mdblist.com/tmdb/${type}/${movie.id}?apikey=${MDBLIST_API_KEY}`, function(res){
 
@@ -859,6 +895,7 @@ if (imdbId) {
         if (imdbRating) {
             vote = parseFloat(imdbRating.value).toFixed(1);
             source = 'imdb';
+            saveCachedMDBRating(movie.id, vote);
         }
     }
 
