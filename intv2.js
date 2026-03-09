@@ -1,7 +1,7 @@
 (function () {
     'use strict';
 
-    const OMDB_API_KEY = '7d0a0115';
+    const MDBLIST_API_KEY = 'glu1fx0dz20smg0myphf4vfpj';
 
     if (typeof Lampa === 'undefined') return;
     if (Lampa.Manifest.app_digital < 300) return; // Тільки для v3.0.0+
@@ -847,20 +847,20 @@
 
     const imdbId = movie.external_ids && movie.external_ids.imdb_id;
 
-    if (imdbId) {
+if (imdbId) {
 
-        $.get(`https://www.omdbapi.com/?i=${imdbId}&apikey=${OMDB_API_KEY}`, function(res){
+    $.get(`https://mdblist.com/api/?apikey=${MDBLIST_API_KEY}&i=${imdbId}`, function(res){
 
-            if (res && res.imdbRating && res.imdbRating !== 'N/A') {
+        if (res && res.ratings && res.ratings.imdb) {
 
-                vote = parseFloat(res.imdbRating).toFixed(1);
-                source = 'imdb';
+            vote = parseFloat(res.ratings.imdb).toFixed(1);
+            source = 'imdb';
 
-            } else if (movie.vote_average) {
+        } else if (movie.vote_average) {
 
-                vote = parseFloat(movie.vote_average).toFixed(1);
-                source = 'tmdb';
-            }
+            vote = parseFloat(movie.vote_average).toFixed(1);
+            source = 'tmdb';
+        }
 
             renderVote();
 
