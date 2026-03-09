@@ -846,10 +846,11 @@
     };
 
     const imdbId = movie.external_ids && movie.external_ids.imdb_id;
+const type = movie.name ? 'show' : 'movie';
 
 if (imdbId) {
 
-    $.get(`https://api.mdblist.com/tmdb/${type}/${data.id}?apikey=${MDBLIST_API_KEY}`, function(res){
+    $.get(`https://api.mdblist.com/tmdb/${type}/${movie.id}?apikey=${MDBLIST_API_KEY}`, function(res){
 
     if (res && res.ratings) {
 
