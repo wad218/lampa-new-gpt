@@ -849,13 +849,13 @@
 
 if (imdbId) {
 
-    $.get(`https://api.mdblist.com/?apikey=${MDBLIST_API_KEY}&i=${imdbId}`, function(res){
+    $.get(`https://api.mdblist.com/tmdb/${type}/${data.id}?apikey=${MDBLIST_API_KEY}`, function(res){
 
-    if (res && res.ratings && res.ratings.length) {
+    if (res && res.ratings) {
 
         const imdbRating = res.ratings.find(r => r.source === 'imdb');
 
-        if (imdbRating && imdbRating.value) {
+        if (imdbRating) {
             vote = parseFloat(imdbRating.value).toFixed(1);
             source = 'imdb';
         }
