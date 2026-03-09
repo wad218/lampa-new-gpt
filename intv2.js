@@ -851,7 +851,7 @@ if (imdbId) {
 
     $.get(`https://api.mdblist.com/?apikey=${MDBLIST_API_KEY}&i=${imdbId}`, function(res){
 
-       if (res && res.ratings && res.ratings.length) {
+    if (res && res.ratings && res.ratings.length) {
 
         const imdbRating = res.ratings.find(r => r.source === 'imdb');
 
