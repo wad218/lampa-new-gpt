@@ -849,7 +849,7 @@
 
 if (imdbId) {
 
-    $.get(`https://mdblist.com/api/?apikey=${MDBLIST_API_KEY}&i=${imdbId}`, function(res){
+    $.get(`https://api.mdblist.com/?apikey=${MDBLIST_API_KEY}&i=${imdbId}`, function(res){
 
         if (res && (res.imdb_rating || (res.score && res.score.imdb))) {
 
