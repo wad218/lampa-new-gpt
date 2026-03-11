@@ -634,6 +634,11 @@ function saveCachedMDBRating(id, value){
         body.advanced--animation:not(.no--animation) .new-interface .card.card--wide.animate-trigger-enter .card__view {
             animation: animation-trigger-enter 0.2s forwards;
         }
+
+        /* ховаємо рік і країну над логотипом */
+.full-start-new__head{
+    display:none !important;
+}
         </style>`);
 
         $('body').append(Lampa.Template.get('new_interface_logo_styles', {}, true));
