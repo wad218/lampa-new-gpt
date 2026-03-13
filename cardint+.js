@@ -459,14 +459,7 @@
                 z-index: 10 !important; color: #fff !important; font-weight: bold !important;
             }
 
-            .card--wide-custom { width: 25em !important; margin-right: 0.2em !important; margin-bottom: 0 !important; position: relative; cursor: pointer; transition: transform 0.2s ease, z-index 0.2s ease; z-index: 1; }
             
-            .card--wide-custom .card__view { border-radius: 0.4em !important; overflow: hidden !important; box-shadow: 0 3px 6px rgba(0,0,0,0.5); }
-            .card--wide-custom .card-backdrop-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); pointer-events: none; border-radius: 0.4em !important; z-index: 1; }
-            
-            .card--wide-custom.focus { z-index: 99 !important; transform: scale(1.08); }
-            .card--wide-custom.focus .card__view { box-shadow: 0 10px 25px rgba(0,0,0,0.9) !important; border: 3px solid #fff !important; outline: none !important; }
-            .card--wide-custom.focus .card__view::after, .card--wide-custom.focus .card__view::before { display: none !important; content: none !important; }
 
             .card-custom-logo { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 70% !important; height: 70% !important; max-width: 70% !important; max-height: 70% !important; padding: 0 !important; margin: 0 !important; object-fit: contain; z-index: 5; filter: drop-shadow(0px 3px 5px rgba(0,0,0,0.8)); pointer-events: none; transition: filter 0.3s ease; }
             
@@ -503,148 +496,9 @@
             .items-line[data-uas-content-row="true"] .items-line__body { margin-top: 0 !important; margin-bottom: 0 !important; padding-top: 0 !important; padding-bottom: 0 !important; }
             .items-line[data-uas-content-row="true"] .scroll__item { margin-top: 0 !important; margin-bottom: 0 !important; padding-top: 0 !important; padding-bottom: 0 !important; }
 
-            .card--title-btn {
-                width: 100vw !important; 
-                max-width: 100% !important; 
-                height: auto !important;
-                background: transparent !important;
-                border-radius: 1.5em !important;
-                margin: 0.2em 0 !important;
-                display: flex !important;
-                align-items: center !important;
-                justify-content: flex-start !important; 
-                padding: 0.5em 1.5em !important; 
-                cursor: pointer !important;
-                border: 2px solid transparent !important; 
-                box-shadow: none !important;
-                box-sizing: border-box !important;
-                transition: transform 0.2s ease, border 0.2s ease, background 0.2s ease !important;
-            }
-
-            .card--title-btn.focus {
-                background: rgba(255, 255, 255, 0.05) !important;
-                border: 2px solid #fff !important;
-                box-shadow: none !important;
-                outline: none !important;
-                transform: scale(1.01) !important;
-            }
-
-            .title-btn-text {
-                display: flex !important;
-                align-items: center !important;
-                font-size: 1.4em !important;
-                font-weight: bold !important;
-                color: #777 !important; 
-                border: none !important; 
-                padding: 0 !important;
-                line-height: 1.2 !important;
-                text-align: left !important;
-                transition: color 0.2s ease, transform 0.2s ease !important;
-            }
-
-            .title-btn-icon {
-                height: 1.1em !important;
-                width: auto !important;
-                margin-right: 0.5em !important;
-                filter: drop-shadow(0px 1px 2px rgba(0,0,0,0.5)) !important;
-            }
-
-            .card--title-btn.focus .title-btn-text {
-                color: #fff !important; 
-                text-shadow: none !important; 
-                box-shadow: none !important; 
-            }
-
-            .card--title-btn-static {
-                cursor: default !important;
-            }
-            .card--title-btn-static .title-btn-text {
-                opacity: 0.5 !important; 
-            }
-
-            .card--title-btn .card__view, 
-            .card--title-btn .card__view::after, 
-            .card--title-btn .card__view::before {
-                display: none !important;
-            }
-
-            .card--collection-btn {
-                width: 16em !important;
-                height: 7em !important;
-                background: rgba(40,40,40,0.8) !important;
-                border-radius: 0.8em !important;
-                margin-right: 0.8em !important;
-                margin-bottom: 0.8em !important;
-                display: flex !important;
-                flex-direction: column !important;
-                align-items: center !important;
-                justify-content: center !important;
-                padding: 1em !important;
-                cursor: pointer !important;
-                border: 2px solid transparent !important;
-                box-shadow: 0 4px 6px rgba(0,0,0,0.3) !important;
-                transition: transform 0.2s ease, background 0.2s ease, border 0.2s ease !important;
-                text-align: center !important;
-                box-sizing: border-box !important;
-                position: relative;
-            }
-
-            .card--collection-btn.focus {
-                background: rgba(60,60,60,0.9) !important;
-                border: 2px solid #fff !important;
-                transform: scale(1.05) !important;
-                z-index: 99 !important;
-            }
-
-            .card--collection-btn .collection-title {
-                font-size: 1.1em !important;
-                font-weight: bold !important;
-                color: #fff !important;
-                line-height: 1.3 !important;
-                display: -webkit-box;
-                -webkit-line-clamp: 2;
-                -webkit-box-orient: vertical;
-                overflow: hidden;
-            }
-
-            .card--collection-btn .card__view, 
-            .card--collection-btn .card__view::after, 
-            .card--collection-btn .card__view::before {
-                display: none !important;
-            }
-
-            .card--history-custom {
-                width: 16em !important;
-                margin-right: 0.8em !important;
-                margin-bottom: 0 !important;
-                position: relative;
-                cursor: pointer;
-                transition: transform 0.2s ease, z-index 0.2s ease;
-                z-index: 1;
-            }
             
-            .card--history-custom .card__view {
-                border-radius: 0.8em !important;
-                overflow: hidden !important;
-                box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-            }
+
             
-            .card--history-custom .card-backdrop-overlay {
-                position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.4); pointer-events: none; border-radius: 0.8em !important; z-index: 1;
-            }
-            
-            .card--history-custom.focus { z-index: 99 !important; transform: scale(1.08); }
-            .card--history-custom.focus .card__view { box-shadow: 0 10px 25px rgba(0,0,0,0.9) !important; border: 2px solid #fff !important; outline: none !important; }
-            .card--history-custom.focus .card__view::after, .card--history-custom.focus .card__view::before { display: none !important; content: none !important; }
-
-            .card--history-custom > div:not(.card__view) { display: none !important; }
-
-            .card--history-custom .card-badge-age { border-radius: 0 0 0 0.8em !important; }
-            .card--history-custom .card__vote { border-radius: 0.8em 0 0 0 !important; } 
-            .card--history-custom .card__type { border-radius: 0 0 0.8em 0 !important; }  
-            .card--history-custom .card__ua_flag { border-radius: 0 0.8em 0 0 !important; }
-
-            .card--history-custom .card-custom-logo-text { font-size: 1.2em !important; padding: 0 0.5em; }
         `;
         document.head.appendChild(style);
 
