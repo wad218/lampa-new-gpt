@@ -1,44 +1,43 @@
 (function () {
     'use strict';
 
-    if (typeof Lampa === 'undefined') return;
+    // --- МАНІФЕСТ ПЛАГІНУ ---
+    var manifest = {
+        type: 'other',
+        version: '2.1.0',
+        author: '@lme_chat',
+        name: 'Card Styles Pro',
+        description: 'Кастомний стиль карток + Напівпрозорий Прапор України + Бейджі сезонів (у верхньому лівому куті)',
+        component: 'card_styles_pro'
+    };
 
+    // --- НАЛАШТУВАННЯ ---
     var CONFIG = { 
         tmdbApiKey: '', 
         cacheTime: 23 * 60 * 60 * 1000, 
+        enabled: true, 
         language: 'uk',
         endpoint: 'https://wh.lme.isroot.in/',
         timeout: 10000,
-        queue: { maxParallel: 10 }, 
+        uiDeadline: 2200,
+        queue: { maxParallel: 8 },
         cache: {
-            key: 'lme_wh_cache_v5', 
+            key: 'nightingale_wh_cache_v1',
             size: 3000,
             positiveTtl: 1000 * 60 * 60 * 24,
             negativeTtl: 1000 * 60 * 60 * 6
         }
     };
 
-    const PROXIES =[
-        'https://cors.lampa.stream/',
-        'https://cors.eu.org/',
-        'https://corsproxy.io/?url='
-    ];
-
-    
-
+    // --- БАЗА ДАНИХ ТА КЕШ ---
     var inflight = {};
-    var lmeCache = null;
-    var listCache = {};      
-    var tmdbItemCache = {};  
-    var itemUrlCache = {};   
-    var seasonsCache = {};
-
-
+    var nightingaleCache = null;
+    
     var safeStorage = (function () {
         var memoryStore = {};
         try {
             if (typeof window.localStorage !== 'undefined') {
-                var testKey = '__season_test_v5__';
+                var testKey = '__season_test__';
                 window.localStorage.setItem(testKey, '1');
                 window.localStorage.removeItem(testKey);
                 return window.localStorage;
@@ -51,8 +50,10 @@
         };
     })();
 
-    try { seasonsCache = JSON.parse(safeStorage.getItem('seasonBadgeCacheV5') || '{}'); } catch (e) {}
+    var seasonsCache = {};
+    try { seasonsCache = JSON.parse(safeStorage.getItem('seasonBadgeCache') || '{}'); } catch (e) {}
 
+    // --- ДОПОМІЖНІ ФУНКЦІЇ NIGHTINGALE ---
     function debounce(func, wait) {
         var timer;
         return function () {
@@ -65,6 +66,7 @@
     function Cache(config) {
         var self = this;
         var storage = {};
+
         function cleanupExpired() {
             var now = Date.now(), changed = false, keys = Object.keys(storage);
             for (var i = 0; i < keys.length; i++) {
@@ -75,6 +77,7 @@
             }
             if (changed) self.save();
         }
+
         self.save = debounce(function () { Lampa.Storage.set(config.key, storage); }, 400);
         self.init = function () { storage = Lampa.Storage.get(config.key, {}) || {}; cleanupExpired(); };
         self.get = function (id) {
@@ -103,61 +106,10 @@
         }
     };
 
-    async function fetchHtml(url) {
-        for (let proxy of PROXIES) {
-            try {
-                let proxyUrl = proxy.includes('?url=') ? proxy + encodeURIComponent(url) : proxy + url;
-                let res = await fetch(proxyUrl);
-                if (res.ok) {
-                    let text = await res.text();
-                    if (text && text.length > 500 && text.includes('<html') && !text.includes('just a moment...')) {
-                        return text;
-                    }
-                }
-            } catch (e) {}
-        }
-        return '';
-    }
-
-    function getTmdbKey() {
-        let custom = (Lampa.Storage.get('uas_pro_tmdb_apikey') || '').trim();
-        return custom || CONFIG.tmdbApiKey || (Lampa.TMDB && Lampa.TMDB.key ? Lampa.TMDB.key() : '4ef0d7355d9ffb5151e987764708ce96');
-    }
-
-    function getTmdbEndpoint(path) {
-        let url = Lampa.TMDB.api(path);
-        if (!url.includes('api_key')) url += (url.includes('?') ? '&' : '?') + 'api_key=' + getTmdbKey();
-        if (!url.startsWith('http')) url = 'https://api.themoviedb.org/3/' + url;
-        return url;
-    }
-
-    function safeFetch(url) {
-        return new Promise(function (resolve, reject) {
-            var xhr = new XMLHttpRequest(); xhr.open('GET', url, true);
-            xhr.onreadystatechange = function () {
-                if (xhr.readyState === 4) {
-                    if (xhr.status >= 200 && xhr.status < 300) resolve({ ok: true, json: function() { return Promise.resolve(JSON.parse(xhr.responseText)); } });
-                    else reject(new Error('HTTP ' + xhr.status));
-                }
-            };
-            xhr.onerror = function () { reject(new Error('Network error')); }; xhr.send(null);
-        });
-    }
-
-    async function fetchTmdbWithFallback(type, id) {
-        let endpoint = getTmdbEndpoint(`${type}/${id}?language=uk`);
-        let res = await fetch(PROXIES[0] + endpoint).then(r=>r.json()).catch(()=>null);
-        if (res && (!res.overview || res.overview.trim() === '')) {
-            let enEndpoint = getTmdbEndpoint(`${type}/${id}?language=en`);
-            let enRes = await fetch(PROXIES[0] + enEndpoint).then(r=>r.json()).catch(()=>null);
-            if (enRes && enRes.overview) res.overview = enRes.overview;
-        }
-        return res;
-    }
-
     function createMediaMeta(data) {
         var tmdbId = parseInt(data && data.id, 10);
         if (!Number.isFinite(tmdbId) || tmdbId <= 0) return null;
+        
         var mediaKind = String(data.media_type || '').toLowerCase();
         if (mediaKind !== 'tv' && mediaKind !== 'movie') {
             if (data.original_name || data.first_air_date || data.number_of_seasons) mediaKind = 'tv';
@@ -172,6 +124,11 @@
         if (response && typeof response === 'object' && !Array.isArray(response)) {
             if (response.error || response.status === 'error' || response.success === false || response.ok === false) return false;
             if (response.success === true || response.status === 'success' || response.ok === true) return true;
+            if (response.play && typeof response.play === 'string' && response.play.trim().length > 0) return true;
+            if (response.data) {
+                if (response.data === true) return true;
+                if (typeof response.data === 'object' && Object.keys(response.data).length > 0 && !response.data.error) return true;
+            }
             return Object.keys(response).length > 0;
         }
         return false;
@@ -183,7 +140,7 @@
                 requestQueue.add(function () {
                     var url = CONFIG.endpoint + '?tmdb_id=' + encodeURIComponent(meta.tmdbId) + '&serial=' + meta.serial + '&silent=true';
                     return new Promise(function (res) { Lampa.Network.silent(url, function (r) { res(isSuccessResponse(r)); }, function () { res(false); }, null, { timeout: CONFIG.timeout }); })
-                    .then(function (isSuccess) { lmeCache.set(meta.cacheKey, isSuccess); resolve(isSuccess); })
+                    .then(function (isSuccess) { nightingaleCache.set(meta.cacheKey, isSuccess); resolve(isSuccess); })
                     .finally(function () { delete inflight[meta.cacheKey]; });
                 });
             });
@@ -199,6 +156,22 @@
         view.appendChild(badge);
     }
 
+    // --- ДОПОМІЖНІ ФУНКЦІЇ SEASONS ---
+    function safeFetch(url) {
+        return new Promise(function (resolve, reject) {
+            try {
+                var xhr = new XMLHttpRequest(); xhr.open('GET', url, true);
+                xhr.onreadystatechange = function () {
+                    if (xhr.readyState === 4) {
+                        if (xhr.status >= 200 && xhr.status < 300) resolve({ ok: true, json: function() { return Promise.resolve(JSON.parse(xhr.responseText)); } });
+                        else reject(new Error('HTTP ' + xhr.status));
+                    }
+                };
+                xhr.onerror = function () { reject(new Error('Network error')); }; xhr.send(null);
+            } catch (err) { reject(err); }
+        });
+    }
+
     function fetchSeriesData(tmdbId) {
         return new Promise(function (resolve, reject) {
             var now = (new Date()).getTime();
@@ -207,17 +180,17 @@
             if (window.Lampa && Lampa.TMDB && typeof Lampa.TMDB.tv === 'function') {
                 Lampa.TMDB.tv(tmdbId, function (data) {
                     seasonsCache[tmdbId] = { data: data, timestamp: now };
-                    try { safeStorage.setItem('seasonBadgeCacheV5', JSON.stringify(seasonsCache)); } catch (e) {}
+                    try { safeStorage.setItem('seasonBadgeCache', JSON.stringify(seasonsCache)); } catch (e) {}
                     resolve(data);
                 }, reject, { language: CONFIG.language });
-            } else {
-                var url = 'https://api.themoviedb.org/3/tv/' + tmdbId + '?api_key=' + getTmdbKey() + '&language=' + CONFIG.language;
+            } else if (CONFIG.tmdbApiKey) {
+                var url = 'https://api.themoviedb.org/3/tv/' + tmdbId + '?api_key=' + CONFIG.tmdbApiKey + '&language=' + CONFIG.language;
                 safeFetch(url).then(function (r) { return r.json(); }).then(function(data) {
                     seasonsCache[tmdbId] = { data: data, timestamp: now };
-                    try { safeStorage.setItem('seasonBadgeCacheV5', JSON.stringify(seasonsCache)); } catch (e) {}
+                    try { safeStorage.setItem('seasonBadgeCache', JSON.stringify(seasonsCache)); } catch (e) {}
                     resolve(data);
                 }).catch(reject);
-            }
+            } else reject();
         });
     }
 
@@ -227,10 +200,14 @@
         var currentSeason = tmdbData.seasons.filter(function(s) { return s.season_number === last.season_number; })[0];
         
         if (currentSeason && last.season_number > 0) {
+            // Перевіряємо чи сезон завершений (всі серії вийшли)
             var isComplete = currentSeason.episode_count > 0 && last.episode_number >= currentSeason.episode_count;
             var text = isComplete ? "S" + last.season_number : "S" + last.season_number + " " + last.episode_number + "/" + currentSeason.episode_count;
             
+            // Знаходимо існуючий бейдж "card__type" (там де іконка TV)
             var typeBadge = cardHtml.querySelector('.card__type');
+            
+            // Якщо його немає (що буває рідко), створюємо його в тому ж місці
             if (!typeBadge) {
                 var view = cardHtml.querySelector('.card__view');
                 if (!view) return;
@@ -238,7 +215,11 @@
                 typeBadge.className = 'card__type';
                 view.appendChild(typeBadge);
             }
+            
+            // Задаємо кольори: смарагдовий (завершено) або темно-червоний (не завершено)
             var bgColor = isComplete ? 'rgba(46, 204, 113, 0.8)' : 'rgba(170, 20, 20, 0.8)';
+            
+            // Замінюємо іконку на текст сезону
             typeBadge.innerHTML = text;
             typeBadge.classList.add('card__type--season');
             typeBadge.style.backgroundColor = bgColor;
@@ -255,276 +236,38 @@
         return rgb ? 'rgba(' + rgb + ', ' + alpha + ')' : null;
     }
 
-    
-
-    
-    function analyzeAndInvert(imgElement) {
-        try {
-            var canvas = document.createElement('canvas');
-            var ctx = canvas.getContext('2d');
-            canvas.width = imgElement.naturalWidth || imgElement.width;
-            canvas.height = imgElement.naturalHeight || imgElement.height;
-            if (canvas.width === 0 || canvas.height === 0) return;
-            ctx.drawImage(imgElement, 0, 0);
-            var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            var data = imageData.data;
-            var darkPixels = 0, totalPixels = 0;
-            for (var i = 0; i < data.length; i += 4) {
-                if (data[i + 3] < 10) continue; 
-                totalPixels++;
-                var brightness = (data[i] * 299 + data[i + 1] * 587 + data[i + 2] * 114) / 1000;
-                if (brightness < 120) darkPixels++;
-            }
-            if (totalPixels > 0 && (darkPixels / totalPixels) >= 0.85) imgElement.style.filter += " brightness(0) invert(1)";
-        } catch (e) { }
-    }
-
-    function fetchLogo(movie, itemElement) {
-        var mType = movie.media_type || (movie.name ? 'tv' : 'movie');
-        var langPref = Lampa.Storage.get('ym_logo_lang', 'uk_en');
-        var quality = Lampa.Storage.get('ym_img_quality', 'w300');
-        var cacheKey = 'logo_uas_v8_' + quality + '_' + langPref + '_' + mType + '_' + movie.id;
-        var cachedUrl = Lampa.Storage.get(cacheKey);
-
-        function applyLogo(url) {
-            if (url && url !== 'none') {
-                var img = new Image();
-                img.crossOrigin = "anonymous"; 
-                img.className = 'card-custom-logo';
-                img.onload = function() { analyzeAndInvert(img); itemElement.find('.card__view').append(img); };
-                img.src = url;
-            } else {
-                var textLogo = document.createElement('div');
-                textLogo.className = 'card-custom-logo-text';
-                
-                var txt = movie.title || movie.name;
-                if (langPref === 'en') {
-                    txt = movie.original_title || movie.original_name || txt;
-                }
-                
-                textLogo.innerText = txt;
-                itemElement.find('.card__view').append(textLogo);
-            }
-        }
-        
-        if (cachedUrl) { applyLogo(cachedUrl); return; }
-
-        let endpoint = getTmdbEndpoint(`${mType}/${movie.id}/images?include_image_language=uk,en,null`);
-        fetch(PROXIES[0] + endpoint).then(r => r.json()).then(function(res) {
-            var finalLogo = 'none';
-            if (res.logos && res.logos.length > 0) {
-                var found = null;
-                if (langPref === 'uk') {
-                    found = res.logos.find(l => l.iso_639_1 === 'uk');
-                } else if (langPref === 'en') {
-                    found = res.logos.find(l => l.iso_639_1 === 'en');
-                } else {
-                    found = res.logos.find(l => l.iso_639_1 === 'uk') || res.logos.find(l => l.iso_639_1 === 'en');
-                }
-
-                if (found) finalLogo = PROXIES[0] + Lampa.TMDB.image('t/p/' + quality + found.file_path);
-            }
-            Lampa.Storage.set(cacheKey, finalLogo);
-            applyLogo(finalLogo);
-        }).catch(function() {
-            Lampa.Storage.set(cacheKey, 'none');
-            applyLogo('none');
-        });
-    }
-
-    
-
-    
-    
-
-    function createSettings() {
-        if (!window.Lampa || !Lampa.SettingsApi) return;
-        Lampa.SettingsApi.addComponent({
-            component: 'ymainpage',
-            name: 'YMainPage',
-            icon: `<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>`
-        });
-
-        Lampa.SettingsApi.addParam({
-            component: 'ymainpage',
-            param: { name: 'uas_support_yarik', type: 'button' },
-            field: { name: "РџС–РґС‚СЂРёРјР°С‚Рё СЂРѕР·СЂРѕР±РЅРёРєС–РІ: Yarik's Mod's", description: 'https://lampalampa.free.nf/' }
-        });
-        
-        Lampa.SettingsApi.addParam({
-            component: 'ymainpage',
-            param: { name: 'uas_support_lme', type: 'button' },
-            field: { name: 'РџС–РґС‚СЂРёРјР°С‚Рё СЂРѕР·СЂРѕР±РЅРёРєС–РІ: LampaME', description: 'https://lampame.github.io/' }
-        });
-
-        Lampa.SettingsApi.addParam({
-            component: 'ymainpage',
-            param: { name: 'uas_show_flag', type: 'trigger', default: true },
-            field: { name: 'Р’С–РґРѕР±СЂР°Р¶РµРЅРЅСЏ РЈРљР  РѕР·РІСѓС‡РѕРє', description: 'РџРѕС€СѓРє С‚Р° РІС–РґРѕР±СЂР°Р¶РµРЅРЅСЏ РїСЂР°РїРѕСЂС†СЏ РЅР° РєР°СЂС‚РєР°С…' }
-        });
-
-        var langValues = {
-            'uk': 'РўС–Р»СЊРєРё СѓРєСЂР°С—РЅСЃСЊРєРѕСЋ',
-            'uk_en': 'РЈРєСЂ + РђРЅРіР» (Р—Р° Р·Р°РјРѕРІС‡СѓРІР°РЅРЅСЏРј)',
-            'en': 'РўС–Р»СЊРєРё Р°РЅРіР»С–Р№СЃСЊРєРѕСЋ'
-        };
-        Lampa.SettingsApi.addParam({
-            component: 'ymainpage',
-            param: { name: 'ym_logo_lang', type: 'select', values: langValues, default: 'uk_en' },
-            field: { name: 'РњРѕРІР° Р»РѕРіРѕС‚РёРїС–РІ', description: 'РћР±РµСЂС–С‚СЊ РїСЂС–РѕСЂРёС‚РµС‚ РјРѕРІРё РґР»СЏ Р»РѕРіРѕС‚РёРїС–РІ' }
-        });
-
-        var qualValues = {
-            'w300': 'w300 (Р—Р° Р·Р°РјРѕРІС‡СѓРІР°РЅРЅСЏРј)',
-            'w500': 'w500',
-            'w780': 'w780',
-            'original': 'РћСЂРёРіС–РЅР°Р»'
-        };
-        Lampa.SettingsApi.addParam({
-            component: 'ymainpage',
-            param: { name: 'ym_img_quality', type: 'select', values: qualValues, default: 'w300' },
-            field: { name: 'РЇРєС–СЃС‚СЊ Р·РѕР±СЂР°Р¶РµРЅСЊ (Р¤РѕРЅ/Р›РѕРіРѕ)', description: 'Р’РїР»РёРІР°С” РЅР° С€РІРёРґРєС–СЃС‚СЊ Р·Р°РІР°РЅС‚Р°Р¶РµРЅРЅСЏ СЃС‚РѕСЂС–РЅРєРё' }
-        });
-
-        let orderValues = { '1': 'РџРѕР·РёС†С–СЏ 1', '2': 'РџРѕР·РёС†С–СЏ 2', '3': 'РџРѕР·РёС†С–СЏ 3', '4': 'РџРѕР·РёС†С–СЏ 4', '5': 'РџРѕР·РёС†С–СЏ 5', '6': 'РџРѕР·РёС†С–СЏ 6', '7': 'РџРѕР·РёС†С–СЏ 7', '8': 'РџРѕР·РёС†С–СЏ 8', '9': 'РџРѕР·РёС†С–СЏ 9' };
-
-        DEFAULT_ROWS_SETTINGS.forEach(r => {
-            Lampa.SettingsApi.addParam({
-                component: 'ymainpage',
-                param: { name: r.id, type: 'trigger', default: r.default },
-                field: { name: 'Р’РёРјРєРЅСѓС‚Рё / РЈРІС–РјРєРЅСѓС‚Рё: ' + r.title, description: 'РџРѕРєР°Р·СѓРІР°С‚Рё С†РµР№ СЂСЏРґРѕРє РЅР° РіРѕР»РѕРІРЅС–Р№' }
-            });
-            Lampa.SettingsApi.addParam({
-                component: 'ymainpage',
-                param: { name: r.id + '_order', type: 'select', values: orderValues, default: r.defOrder },
-                field: { name: 'РџРѕСЂСЏРґРѕРє: ' + r.title, description: 'РЇРєРёРј РїРѕ СЂР°С…СѓРЅРєСѓ РІРёРІРѕРґРёС‚Рё С†РµР№ СЂСЏРґРѕРє' }
-            });
-        });
-
-        Lampa.SettingsApi.addParam({
-            component: 'ymainpage',
-            param: { name: 'uas_pro_tmdb_btn', type: 'button' },
-            field: { name: 'Р’Р»Р°СЃРЅРёР№ TMDB API РєР»СЋС‡', description: 'РќР°С‚РёСЃРЅС–С‚СЊ, С‰РѕР± РІРІРµСЃС‚Рё РєР»СЋС‡ (РїСЂР°С†СЋС” РїРµСЂС€РѕС‡РµСЂРіРѕРІРѕ)' }
-        });
-
-        Lampa.Settings.listener.follow('open', function (e) {
-            if (e.name === 'ymainpage') {
-                e.body.find('[data-name="uas_support_yarik"]').on('hover:enter', function () {
-                    window.open('https://lampalampa.free.nf/', '_blank');
-                });
-                
-                e.body.find('[data-name="uas_support_lme"]').on('hover:enter', function () {
-                    window.open('https://lampame.github.io/main/#uk', '_blank');
-                });
-
-                e.body.find('[data-name="uas_pro_tmdb_btn"]').on('hover:enter', function () {
-                    var currentKey = Lampa.Storage.get('uas_pro_tmdb_apikey') || '';
-                    Lampa.Input.edit({
-                        title: 'Р’РІРµРґС–С‚СЊ TMDB API РљР»СЋС‡', value: currentKey, free: true, nosave: true
-                    }, function (new_val) {
-                        if (new_val !== undefined) {
-                            Lampa.Storage.set('uas_pro_tmdb_apikey', new_val.trim());
-                            Lampa.Noty.show('TMDB РєР»СЋС‡ Р·Р±РµСЂРµР¶РµРЅРѕ. РџРµСЂРµР·Р°РїСѓСЃС‚С–С‚СЊ Р·Р°СЃС‚РѕСЃСѓРЅРѕРє.');
-                        }
-                    });
-                });
-            }
-        });
-    }
-
-    
-
+    // --- ОСНОВНА ІНІЦІАЛІЗАЦІЯ ---
     function start() {
-        if (window.uaserials_pro_v8_loaded) return;
-        window.uaserials_pro_v8_loaded = true;
+        if (window.card_styles_pro_fixed) return;
+        window.card_styles_pro_fixed = true;
 
-        lmeCache = new Cache(CONFIG.cache);
-        lmeCache.init();
+        if (Lampa.Manifest) Lampa.Manifest.plugins = manifest;
+        
+        nightingaleCache = new Cache(CONFIG.cache);
+        nightingaleCache.init();
 
-        createSettings();
+        var s = Lampa.Storage.get('sbadger_settings_v1') || {};
+        if (s.tmdb_key) CONFIG.tmdbApiKey = s.tmdb_key;
 
+        // Вбудовуємо CSS
         var style = document.createElement('style');
-        style.innerHTML = `
-            .card .card__age { display: none !important; }
-
-            .card__view .card-badge-age { 
-                display: block !important; right: 0 !important; top: 0 !important; padding: 0.2em 0.45em !important; 
-                background: rgba(0, 0, 0, 0.6) !important; 
-                position: absolute !important; margin-top: 0 !important; font-size: 1.1em !important; 
-                z-index: 10 !important; color: #fff !important; font-weight: bold !important;
-            }
-
+        style.innerHTML =
+            '.card__vote { right: 0 !important; bottom: 0 !important; padding: 0.2em 0.45em !important; border-radius: 0.75em 0 !important; z-index: 2; }' +
+            '.card__view .card__age { right: 0 !important; top: 0 !important; padding: 0.2em 0.45em !important; border-radius: 0 0.75em !important; background: rgba(0, 0, 0, 0.5) !important; position: absolute !important; margin-top: 0 !important; font-size: 1.3em !important; z-index: 2; }' +
             
-
-            .card-custom-logo { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 70% !important; height: 70% !important; max-width: 70% !important; max-height: 70% !important; padding: 0 !important; margin: 0 !important; object-fit: contain; z-index: 5; filter: drop-shadow(0px 3px 5px rgba(0,0,0,0.8)); pointer-events: none; transition: filter 0.3s ease; }
+            /* Стилізація базового бейджа card__type у лівому верхньому куті */
+            '.card__type { position: absolute !important; left: 0 !important; top: 0 !important; width: auto !important; height: auto !important; line-height: 1 !important; padding: 0.3em !important; border-radius: 0.75em 0 0.75em 0 !important; background: rgba(0, 0, 0, 0.5) !important; display: flex !important; align-items: center; justify-content: center; z-index: 2; color: #fff !important; transition: background 0.3s !important; }' +
+            '.card__type svg { width: 1.5em !important; height: 1.5em !important; }' +
             
-            .card-custom-logo-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 80%; max-height: 70%; text-align: center; font-size: 2em; font-weight: 600; color: #fff; text-shadow: none !important; z-index: 5; pointer-events: none; word-wrap: break-word; white-space: normal; line-height: 1.2; font-family: sans-serif; display: flex; align-items: center; justify-content: center; }
-
-            .card--wide-custom > div:not(.card__view):not(.custom-title-bottom):not(.custom-overview-bottom) { display: none !important; }
-            .custom-title-bottom { width: 100%; text-align: left; font-size: 1.1em; font-weight: bold; margin-top: 0.3em; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 0.2em; }
-            .custom-overview-bottom { width: 100%; text-align: left; font-size: 0.85em; color: #bbb; line-height: 1.2; margin-top: 0.2em; padding: 0 0.2em; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; white-space: normal; }
+            /* Додатковий клас, коли бейдж замінюється на текст сезонів */
+            '.card__type.card__type--season { font-size: 1.3em !important; font-weight: bold !important; padding: 0.2em 0.45em !important; font-family: Roboto, Arial, sans-serif !important; }' +
+            '.card__icons { top: 2.4em !important; }' +
             
-            .card__vote { right: 0 !important; bottom: 0 !important; padding: 0.2em 0.45em !important; z-index: 2; position: absolute !important; font-weight: bold; background: rgba(0,0,0,0.6); }
-            .card__type { position: absolute !important; left: 0 !important; top: 0 !important; width: auto !important; height: auto !important; line-height: 1 !important; padding: 0.3em !important; background: rgba(0, 0, 0, 0.5) !important; display: flex !important; align-items: center; justify-content: center; z-index: 2; color: #fff !important; transition: background 0.3s !important; }
-            .card__type svg { width: 1.5em !important; height: 1.5em !important; }
-            .card__type.card__type--season { font-size: 1.1em !important; font-weight: bold !important; padding: 0.2em 0.45em !important; font-family: Roboto, Arial, sans-serif !important; }
-            .card__ua_flag { position: absolute !important; left: 0 !important; bottom: 0 !important; width: 2.4em !important; height: 1.4em !important; font-size: 1.3em !important; background: linear-gradient(180deg, #0057b8 50%, #ffd700 50%) !important; opacity: 0.8 !important; z-index: 2; }
-            
-            .card--wide-custom .card-badge-age { border-radius: 0 0 0 0.5em !important; }
-            .card--wide-custom .card__vote { border-radius: 0.5em 0 0 0 !important; } 
-            .card--wide-custom .card__type { border-radius: 0 0 0.5em 0 !important; }  
-            .card--wide-custom .card__ua_flag { border-radius: 0 0.5em 0 0 !important; }
-
-            .card:not(.card--wide-custom):not(.card--history-custom) .card-badge-age { border-radius: 0 0.8em 0 0.8em !important; }
-            .card:not(.card--wide-custom):not(.card--history-custom) .card__vote { border-radius: 0.8em 0 0.8em 0 !important; }
-            .card:not(.card--wide-custom):not(.card--history-custom) .card__type { border-radius: 0.8em 0 0.8em 0 !important; }
-            .card:not(.card--wide-custom):not(.card--history-custom) .card__ua_flag { border-radius: 0 0.8em 0 0.8em !important; }
-
-            .items-line[data-uas-title-row="true"] .items-line__head { display: none !important; }
-            .items-line[data-uas-content-row="true"] .items-line__head { display: none !important; }
-            
-            .items-line[data-uas-title-row="true"] { margin-top: 0 !important; margin-bottom: 0.5em !important; padding-top: 0 !important; padding-bottom: 0 !important; }
-            .items-line[data-uas-title-row="true"] .items-line__body { margin-top: 0 !important; margin-bottom: 0 !important; padding-top: 0 !important; padding-bottom: 0 !important; }
-            .items-line[data-uas-title-row="true"] .scroll__item { margin-top: 0 !important; margin-bottom: 0 !important; padding-top: 0 !important; padding-bottom: 0 !important; }
-            
-            .items-line[data-uas-content-row="true"] { margin-top: 0.1em !important; margin-bottom: 0.5em !important; padding-top: 0 !important; padding-bottom: 0 !important; }
-            .items-line[data-uas-content-row="true"] .items-line__body { margin-top: 0 !important; margin-bottom: 0 !important; padding-top: 0 !important; padding-bottom: 0 !important; }
-            .items-line[data-uas-content-row="true"] .scroll__item { margin-top: 0 !important; margin-bottom: 0 !important; padding-top: 0 !important; padding-bottom: 0 !important; }
-
-            
-
-            
-        `;
+            /* Напівпрозорий Прапор України */
+            '.card__ua_flag { position: absolute !important; left: 0 !important; bottom: 0 !important; width: 2.4em !important; height: 1.4em !important; font-size: 1.3em !important; border-radius: 0 0.75em 0 0.75em !important; background: linear-gradient(180deg, #0057b8 50%, #ffd700 50%) !important; opacity: 0.8 !important; z-index: 2; }';
         document.head.appendChild(style);
 
-        Lampa.Listener.follow('line', function (e) {
-            if (e.type === 'create' && e.data && e.line && e.line.render) {
-                var el = e.line.render();
-                if (e.data.uas_title_row) el.attr('data-uas-title-row', 'true');
-                if (e.data.uas_content_row) el.attr('data-uas-content-row', 'true');
-            }
-        });
-
-        var initialFocusHandled = true; 
-
-        Lampa.Listener.follow('activity', function (e) {
-            if (e.type === 'start') {
-                initialFocusHandled = false;
-            }
-        });
-
-        Lampa.Listener.follow('controller', function (e) {
-            if (e.type === 'focus' && !initialFocusHandled) {
-                initialFocusHandled = true; 
-                var target = $(e.target);
-                if (target.hasClass('card--title-btn')) {
-                    setTimeout(function() {
-                        Lampa.Controller.move('down');
-                    }, 20); 
-                }
-            }
-        });
-
+        // Перехоплюємо рендер картки
         var CardMaker = Lampa.Maker.map('Card');
         var originalOnVisible = CardMaker.Card.onVisible;
 
@@ -535,24 +278,15 @@
             var data = this.data;
             if (!html || !data) return;
 
-            if (data.is_title_btn || data.is_collection_btn) return;
-
-            var isWideCard = html.classList.contains('card--wide-custom') || $(html).hasClass('card--wide-custom');
-            var isHistoryCard = html.classList.contains('card--history-custom') || $(html).hasClass('card--history-custom');
-            var isSpecialCard = isWideCard || isHistoryCard;
-
-            var view = html.querySelector('.card__view');
-            if (view && data) {
-                var ageBadge = view.querySelector('.card-badge-age');
-                if (!ageBadge) {
-                    var yearStr = (data.release_date || data.first_air_date || '').toString().substring(0, 4);
-                    if (yearStr && yearStr.length === 4) {
-                        ageBadge = document.createElement('div');
-                        ageBadge.className = 'card-badge-age';
-                        ageBadge.innerText = yearStr;
-                        view.appendChild(ageBadge);
-                    }
-                }
+            // 1. Стилі карток (Завжди починаємо зі стандартної SVG-іконки)
+            var tv = html.getElementsByClassName('card__type');
+            if (tv.length > 0) {
+                var element = tv[0];
+                // Скидаємо бейдж до стандартної SVG іконки під час першого рендеру
+                // Це не дозволить показати невірні дані сезонів, якщо картка була використана повторно (VirtualList)
+                element.classList.remove('card__type--season');
+                element.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+                element.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 51.802 51.801"><path d="M47.947 4.43H12.495A3.86 3.86 0 0 0 8.64 8.284v2.641h-.466a3.86 3.86 0 0 0-3.855 3.854v2.642h-.465A3.86 3.86 0 0 0 0 21.275v22.242a3.86 3.86 0 0 0 3.854 3.854h35.453a3.86 3.86 0 0 0 3.855-3.854v-2.644h.465a3.86 3.86 0 0 0 3.854-3.854v-2.641h.467a3.86 3.86 0 0 0 3.854-3.854V8.284a3.857 3.857 0 0 0-3.855-3.854m-8.75 25.987v12.99H3.963V21.385h35.234zm4.321 6.494h-.355V21.275a3.86 3.86 0 0 0-3.855-3.854H12.604v-.001H8.641v-1.266h-.357v-1.266h35.235V36.91zm4.321-6.494h-.356V14.78a3.86 3.86 0 0 0-3.854-3.854H12.604V8.394H47.84z" fill="currentColor"></path><path d="m26.401 30.446-5.788-4.215a1.916 1.916 0 0 0-3.044 1.549v8.43a1.914 1.914 0 0 0 1.916 1.916c.398 0 .794-.125 1.128-.367l5.788-4.215a1.92 1.92 0 0 0 0-3.098" fill="currentColor"></path></svg>';
             }
 
             var vote = html.getElementsByClassName('card__vote');
@@ -561,29 +295,31 @@
                 if (color) vote[0].style.backgroundColor = color;
             }
 
-            var showFlag = Lampa.Storage.get('uas_show_flag');
-            if (showFlag === null || showFlag === undefined) showFlag = true;
+            var age = html.querySelector('.card__age');
+            var view = html.querySelector('.card__view');
+            if (age && view) view.appendChild(age);
 
-            if (showFlag && data.id) {
-                var oldFlag = html.querySelector('.card__ua_flag');
-                if (oldFlag) oldFlag.remove();
+            // 2. Очищення від попередніх бейджів локалізації
+            var oldFlag = html.querySelector('.card__ua_flag');
+            if (oldFlag) oldFlag.remove();
 
+            // 3. Nightingale Прапор
+            if (data.source && (data.source === 'tmdb' || data.source === 'cub')) {
                 var meta = createMediaMeta(data);
                 if (meta) {
-                    var cached = lmeCache.get(meta.cacheKey);
-                    if (cached === true) renderFlag(html);
-                    else if (cached !== false) {
+                    var cached = nightingaleCache.get(meta.cacheKey);
+                    if (cached === true) {
+                        renderFlag(html);
+                    } else if (cached !== false) {
                         loadFlag(meta).then(function (isSuccess) {
                             if (isSuccess && cardInstance.html.parentNode) renderFlag(cardInstance.html);
                         });
                     }
                 }
-            } else if (!showFlag && !isSpecialCard) {
-                var oldFlag = html.querySelector('.card__ua_flag');
-                if (oldFlag) oldFlag.remove();
             }
 
-            if ((data.media_type === 'tv' || data.name || data.number_of_seasons) && data.id) {
+            // 4. Завантаження даних Сезонів (Замінить ліву верхню іконку при успіху)
+            if (CONFIG.enabled && (data.name || data.first_air_date || data.number_of_seasons || data.media_type === 'tv')) {
                 fetchSeriesData(data.id).then(function(tmdbData) {
                     if (cardInstance.html.parentNode && cardInstance.data === data) {
                         renderSeasonBadge(cardInstance.html, tmdbData);
@@ -592,9 +328,24 @@
             }
         };
 
+        // --- ДОДАВАННЯ НАЛАШТУВАНЬ В МЕНЮ ---
+        if (Lampa.SettingsApi) {
+            Lampa.Template.add('settings_card_styles_pro', '<div></div>');
+            Lampa.SettingsApi.addParam({
+                component: 'interface',
+                param: { type: 'button', component: 'card_styles_pro' },
+                field: { name: 'Стилі та Сезони', description: 'Налаштування прогресу серій (TMDB API)' },
+                onChange: function () { Lampa.Settings.create('card_styles_pro', { template: 'settings_card_styles_pro', onBack: function () { Lampa.Settings.create('interface'); } }); }
+            });
+            Lampa.SettingsApi.addParam({
+                component: 'card_styles_pro',
+                param: { name: 'sbadger_tmdb_key', type: 'input', values: '', "default": CONFIG.tmdbApiKey },
+                field: { name: 'TMDB API ключ', description: 'Необов\'язково, Lampa має вбудований ключ. За потреби введіть власний.' },
+                onChange: function (v) { CONFIG.tmdbApiKey = String(v || '').trim(); Lampa.Storage.set('sbadger_settings_v1', {tmdb_key: CONFIG.tmdbApiKey}); }
+            });
+        }
     }
 
     if (window.appready) start();
-    else Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') start(); });
-
+    else { Lampa.Listener.follow('app', function (e) { if (e.type == 'ready') start(); }); }
 })();
