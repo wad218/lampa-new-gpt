@@ -33,11 +33,6 @@
     var itemUrlCache = {};   
     var seasonsCache = {};
 
-    Lampa.Lang.add({
-        main: 'Р“РѕР»РѕРІРЅР° UA',
-        title_main: 'Р“РѕР»РѕРІРЅР° UA',
-        title_tmdb: 'Р“РѕР»РѕРІРЅР° UA'
-    });
 
     var safeStorage = (function () {
         var memoryStore = {};
