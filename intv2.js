@@ -639,6 +639,12 @@ function saveCachedMDBRating(id, value){
 .full-start-new__head{
     display:none !important;
 }
+
+.full-start__rate.rating--green { color:#2ecc71; }
+.full-start__rate.rating--blue { color:#60a5fa; }
+.full-start__rate.rating--orange { color:#f59e0b; }
+.full-start__rate.rating--red { color:#ef4444; }
+
         </style>`);
 
         $('body').append(Lampa.Template.get('new_interface_logo_styles', {}, true));
@@ -844,6 +850,16 @@ function saveCachedMDBRating(id, value){
     let vote = null;
     let source = null;
     const self = this;
+            
+    function getRatingClass(rating){
+    var r = parseFloat(rating);
+
+    if(r >= 8) return 'rating--green';
+    if(r >= 6) return 'rating--blue';
+    if(r >= 4) return 'rating--orange';
+
+    return 'rating--red';
+}        
 
     const renderVote = function () {
 
@@ -852,7 +868,7 @@ function saveCachedMDBRating(id, value){
         if (source === 'imdb') {
 
             details.push(`
-                <div class="full-start__rate rate--imdb">
+                <div class="full-start__rate rate--imdb ${getRatingClass(vote)}">
                     <div>${vote}</div>
                     <div class="source--name">
                         <img src="https://raw.githubusercontent.com/wad218/lmp-rtg/main/wwwroot/imdb.png" style="height:20px;">
