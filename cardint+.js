@@ -260,7 +260,7 @@
             '.card__type svg { width: 1.5em !important; height: 1.5em !important; }' +
             
             /* Додатковий клас, коли бейдж замінюється на текст сезонів */
-            '.card__type.card__type--season { font-size: 1.3em !important; font-weight: bold !important; padding: 0.2em 0.45em !important; font-family: Roboto, Arial, sans-serif !important; }' +
+            '.card__type.card__type--season { font-size: 1.3em !important; font-weight: bold !important; padding: 0.2em 0.45em !important; background: rgba(52, 176, 109, 0.84) !important; font-family: Roboto, Arial, sans-serif !important; }' +
             '.card__icons { top: 2.4em !important; }' +
             
             /* Напівпрозорий Прапор України */
