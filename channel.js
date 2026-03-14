@@ -3,7 +3,7 @@
 
     if (typeof Lampa === 'undefined') return;
 
-    // ---- НАЛАШТУВАННЯ ----
+    // ---- налаштування ----
     Lampa.SettingsApi.addParam({
         component: 'interface',
         param: {
@@ -13,12 +13,11 @@
         },
         field: {
             name: 'Показувати канал "Переглянуте"',
-            description: 'Додає рядок історії переглядів на головну'
+            description: 'Історія переглядів на головній'
         }
     });
 
-    // ---- РЯДОК ІСТОРІЇ ----
-    function loadHistory(component, params, oncomplete){
+    function loadHistoryRow(callback){
 
         let hist = [];
 
@@ -27,7 +26,7 @@
         }
         catch(e){}
 
-        oncomplete({
+        callback({
             results: hist,
             title: 'Переглянуте',
             params:{
@@ -39,24 +38,16 @@
         });
     }
 
-    // ---- ДЖЕРЕЛО ДЛЯ HOME ----
-    Lampa.Api.sources.history_home = {
-        title: 'Переглянуте',
-        main: loadHistory
-    };
-
-    // ---- ДОДАТИ НА ГОЛОВНУ ----
     Lampa.Listener.follow('app', function(e){
         if(e.type === 'ready'){
 
-            if(Lampa.Storage.get('show_history_home', true)){
+            if(!Lampa.Storage.get('show_history_home', true)) return;
 
-                Lampa.Home.add({
-                    title: 'Переглянуте',
-                    source: 'history_home'
-                }, 0);
-
-            }
+            Lampa.Api.partNext([
+                function(cb){
+                    loadHistoryRow(cb);
+                }
+            ], 0);
 
         }
     });
