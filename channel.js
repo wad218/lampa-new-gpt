@@ -3,41 +3,25 @@
 
 if (typeof Lampa === 'undefined') return;
 
-function historyRow(callback){
+// створюємо компонент історії
+Lampa.Component.add('history_home', {
+    component: 'category_full',
+    source: 'history'
+});
 
-    let hist = [];
-
-    try{
-        let fav = Lampa.Favorite.all();
-        if(fav && fav.history) hist = fav.history;
-    }
-    catch(e){}
-
-    callback({
-        name: 'history_home',
-        title: 'Переглянуте',
-        results: hist,
-        params:{
-            items:{
-                mapping:'line',
-                view:15
-            }
-        }
-    });
-
-}
-
+// додаємо канал на головну
 Lampa.Listener.follow('app', function(e){
 
     if(e.type === 'ready'){
 
         setTimeout(function(){
 
-            Lampa.Api.partNext([
-                function(cb){
-                    historyRow(cb);
-                }
-            ],0);
+            if(Lampa.Home){
+                Lampa.Home.add({
+                    title: 'Переглянуте',
+                    component: 'history_home'
+                });
+            }
 
         },1000);
 
