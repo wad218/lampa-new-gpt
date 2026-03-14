@@ -3,12 +3,27 @@
 
     if (typeof Lampa === 'undefined') return;
 
+    // ---- НАЛАШТУВАННЯ ----
+    Lampa.SettingsApi.addParam({
+        component: 'interface',
+        param: {
+            name: 'show_history_home',
+            type: 'trigger',
+            default: true
+        },
+        field: {
+            name: 'Показувати канал "Переглянуте"',
+            description: 'Додає рядок історії переглядів на головну'
+        }
+    });
+
+    // ---- РЯДОК ІСТОРІЇ ----
     function loadHistory(component, params, oncomplete){
+
         let hist = [];
 
         try{
-            let fav = Lampa.Favorite.all();
-            if(fav && fav.history) hist = fav.history;
+            hist = (Lampa.Favorite.all().history || []);
         }
         catch(e){}
 
@@ -24,18 +39,24 @@
         });
     }
 
+    // ---- ДЖЕРЕЛО ДЛЯ HOME ----
     Lampa.Api.sources.history_home = {
         title: 'Переглянуте',
         main: loadHistory
     };
 
+    // ---- ДОДАТИ НА ГОЛОВНУ ----
     Lampa.Listener.follow('app', function(e){
         if(e.type === 'ready'){
 
-            Lampa.Home.add({
-                title: 'Переглянуте',
-                source: 'history_home'
-            }, 0);
+            if(Lampa.Storage.get('show_history_home', true)){
+
+                Lampa.Home.add({
+                    title: 'Переглянуте',
+                    source: 'history_home'
+                }, 0);
+
+            }
 
         }
     });
