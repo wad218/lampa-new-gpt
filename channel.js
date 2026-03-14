@@ -1,55 +1,21 @@
 (function () {
-    'use strict';
+'use strict';
 
-    if (typeof Lampa === 'undefined') return;
+if (typeof Lampa === 'undefined') return;
 
-    // ---- налаштування ----
-    Lampa.SettingsApi.addParam({
-        component: 'interface',
-        param: {
-            name: 'show_history_home',
-            type: 'trigger',
-            default: true
-        },
-        field: {
-            name: 'Показувати канал "Переглянуте"',
-            description: 'Історія переглядів на головній'
-        }
-    });
+Lampa.Listener.follow('app', function(e){
 
-    function loadHistoryRow(callback){
+    if(e.type === 'ready'){
 
-        let hist = [];
+        if(!Lampa.Storage.get('history_home_show', true)) return;
 
-        try{
-            hist = (Lampa.Favorite.all().history || []);
-        }
-        catch(e){}
-
-        callback({
-            results: hist,
+        Lampa.Home.add({
             title: 'Переглянуте',
-            params:{
-                items:{
-                    mapping:'line',
-                    view:15
-                }
-            }
-        });
+            source: 'history'
+        },0);
+
     }
 
-    Lampa.Listener.follow('app', function(e){
-        if(e.type === 'ready'){
-
-            if(!Lampa.Storage.get('show_history_home', true)) return;
-
-            Lampa.Api.partNext([
-                function(cb){
-                    loadHistoryRow(cb);
-                }
-            ], 0);
-
-        }
-    });
+});
 
 })();
