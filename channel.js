@@ -15,7 +15,7 @@
             Lampa.Home.add({
                 title: 'Переглянуте',
                 component: 'history_view'
-            });
+            }, 0);   // ← це робить канал першим
 
         }
     });
