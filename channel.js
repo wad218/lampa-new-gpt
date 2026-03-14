@@ -3,8 +3,8 @@
 
     if (!window.Lampa) return;
 
-    Lampa.Component.add('watched_history', {
-        component: 'category_full',
+    Lampa.Component.add('history_view', {
+        component: 'category',
         title: 'Переглянуте',
         source: 'history'
     });
@@ -12,11 +12,9 @@
     Lampa.Listener.follow('app', function(e){
         if(e.type === 'ready'){
 
-            Lampa.Storage.set('main_watched_history', true);
-
-            Lampa.Main.add({
+            Lampa.Home.add({
                 title: 'Переглянуте',
-                component: 'watched_history'
+                component: 'history_view'
             });
 
         }
