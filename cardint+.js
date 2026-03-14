@@ -256,7 +256,7 @@
             '.card__view .card__age { right: 0 !important; top: 0 !important; padding: 0.2em 0.45em !important; border-radius: 0 0.75em !important; background: rgba(0, 0, 0, 0.5) !important; position: absolute !important; margin-top: 0 !important; font-size: 1.3em !important; font-weight: bold !important; z-index: 2; }' +
             
             /* Стилізація базового бейджа card__type у лівому верхньому куті */
-            '.card__type { position: absolute !important; left: 0 !important; top: 0 !important; width: auto !important; height: auto !important; line-height: 1 !important; padding: 0.3em !important; border-radius: 0.75em 0 0.75em 0 !important; background: rgba(45, 60, 80, 0.75) !important; display: flex !important; align-items: center; justify-content: center; z-index: 2; color: #fff !important; transition: background 0.3s !important; }' +
+            '.card__type { position: absolute !important; left: 0 !important; top: 0 !important; width: auto !important; height: auto !important; line-height: 1 !important; padding: 0.3em !important; border-radius: 0.75em 0 0.75em 0 !important; background: rgba(40, 40, 40, 0.75) !important; display: flex !important; align-items: center; justify-content: center; z-index: 2; color: #fff !important; transition: background 0.3s !important; }' +
             '.card__type svg { width: 1.5em !important; height: 1.5em !important; }' +
             
             /* Додатковий клас, коли бейдж замінюється на текст сезонів */
