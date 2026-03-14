@@ -263,7 +263,7 @@
             '.card__type svg { width: 1.5em !important; height: 1.5em !important; }' +
             
             /* Додатковий клас, коли бейдж замінюється на текст сезонів */
-            '.card__type.card__type--season { font-size: 1.3em !important; font-weight: bold !important; padding: 0.2em 0.45em !important; background: rgba(52, 176, 109, 0.84) !important; font-family: Roboto, Arial, sans-serif !important; }' +
+            '.card__type.card__type--season { font-size: 1.3em !important; font-weight: bold !important; padding: 0.2em 0.45em !important; font-family: Roboto, Arial, sans-serif !important; border: 1px solid rgba(255,255,255,0.35) !important; box-shadow: 0 2px 6px rgba(0,0,0,0.45) !important; text-shadow: 0 1px 2px rgba(0,0,0,0.7) !important; }' +
             '.card__icons { top: 2.4em !important; }' +
             '.card__type.card__type--season.season-complete { background: rgba(108,52,131,0.9) !important; }' +
             '.card__type.card__type--season.season-airing { background: rgba(72,104,156,0.84) !important; }' +
