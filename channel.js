@@ -3,14 +3,6 @@ if (typeof Lampa === 'undefined') return;
 
 function addHistoryRow() {
 
-    var row = {
-        id: 'custom_history_row',
-        title: 'Історія перегляду',
-        type: 'history',
-        defOrder: 1,
-        icon: ''
-    };
-
     if (!Lampa.Api || !Lampa.Api.sources || !Lampa.Api.sources.tmdb) return;
 
     var original = Lampa.Api.sources.tmdb.main;
@@ -19,17 +11,24 @@ function addHistoryRow() {
 
         original(params, function (data) {
 
-            if (!data || !data.results) {
+            if (!data || !data.rows) {
                 oncomplite(data);
                 return;
             }
 
-            var exists = data.results.some(function (item) {
-                return item.id === row.id;
+            var exists = data.rows.some(function (row) {
+                return row.id === 'history_row';
             });
 
             if (!exists) {
-                data.results.unshift(row);
+                data.rows.unshift({
+                    id: 'history_row',
+                    title: 'Історія перегляду',
+                    type: 'history',
+                    defOrder: 1,
+                    url: '',
+                    icon: ''
+                });
             }
 
             oncomplite(data);
