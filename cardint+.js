@@ -265,8 +265,8 @@
             /* Додатковий клас, коли бейдж замінюється на текст сезонів */
             '.card__type.card__type--season { font-size: 1.3em !important; font-weight: bold !important; padding: 0.2em 0.45em !important; background: rgba(52, 176, 109, 0.84) !important; font-family: Roboto, Arial, sans-serif !important; }' +
             '.card__icons { top: 2.4em !important; }' +
-            '.card__type.card__type--season.season-complete { background: rgba(52,176,109,0.84) !important; }' +
-'.card__type.card__type--season.season-airing { background: rgba(72,104,156,0.84) !important; }' +
+            '.card__type.card__type--season.season-complete { background: rgba(230,126,34,0.9) !important; }' +
+            '.card__type.card__type--season.season-airing { background: rgba(72,104,156,0.84) !important; }' +
             
             /* Напівпрозорий Прапор України */
             '.card__ua_flag { position: absolute !important; left: 0 !important; bottom: 0 !important; width: 2.4em !important; height: 1.4em !important; font-size: 1.3em !important; border-radius: 0 0.75em 0 0.75em !important; background: linear-gradient(180deg, #0057b8 50%, #ffd700 50%) !important; opacity: 0.8 !important; z-index: 2; }';
