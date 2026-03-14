@@ -3,38 +3,27 @@ if (typeof Lampa === 'undefined') return;
 
 function addHistoryRow() {
 
-    if (!Lampa.Api || !Lampa.Api.sources || !Lampa.Api.sources.tmdb) return;
+    if (!Lampa.Home) return;
 
-    var original = Lampa.Api.sources.tmdb.main;
+    Lampa.Listener.follow('home', function (e) {
 
-    Lampa.Api.sources.tmdb.main = function (params, oncomplite, onerror) {
+        if (e.type !== 'create') return;
 
-        original(params, function (data) {
+        var rows = e.object.rows || [];
 
-            if (!data || !data.rows) {
-                oncomplite(data);
-                return;
-            }
+        var exists = rows.some(function (row) {
+            return row.type === 'history';
+        });
 
-            var exists = data.rows.some(function (row) {
-                return row.id === 'history_row';
+        if (!exists) {
+            rows.unshift({
+                title: 'Ви дивилися',
+                type: 'history'
             });
+        }
 
-            if (!exists) {
-                data.rows.unshift({
-                    id: 'history_row',
-                    title: 'Історія перегляду',
-                    type: 'history',
-                    defOrder: 1,
-                    url: '',
-                    icon: ''
-                });
-            }
-
-            oncomplite(data);
-
-        }, onerror);
-    };
+        e.object.rows = rows;
+    });
 }
 
 if (window.appready) addHistoryRow();
