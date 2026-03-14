@@ -1,32 +1,4 @@
-(function () {
-'use strict';
-
-if (typeof Lampa === 'undefined') return;
-
-// створюємо компонент історії
-Lampa.Component.add('history_home', {
-    component: 'category_full',
-    source: 'history'
-});
-
-// додаємо канал на головну
-Lampa.Listener.follow('app', function(e){
-
-    if(e.type === 'ready'){
-
-        setTimeout(function(){
-
-            if(Lampa.Home){
-                Lampa.Home.add({
-                    title: 'Переглянуте',
-                    component: 'history_home'
-                });
-            }
-
-        },1000);
-
-    }
-
-});
-
-})();
+function overrideApi() {
+        Lampa.Api.sources.tmdb.main = function (params, oncomplite, onerror) {
+            var rowDefs =[
+                { id: 'ym_row_history', defOrder: 1, type: 'history', url: '', title: 'Р†СЃС‚РѕСЂС–СЏ РїРµСЂРµРіР»СЏРґСѓ', icon: '' }
