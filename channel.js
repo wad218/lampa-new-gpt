@@ -3,10 +3,29 @@
 
 if (typeof Lampa === 'undefined') return;
 
-Lampa.Component.add('history_home', {
-    component: 'category_full',
-    source: 'history'
-});
+function historyRow(callback){
+
+    let hist = [];
+
+    try{
+        let fav = Lampa.Favorite.all();
+        if(fav && fav.history) hist = fav.history;
+    }
+    catch(e){}
+
+    callback({
+        name: 'history_home',
+        title: 'Переглянуте',
+        results: hist,
+        params:{
+            items:{
+                mapping:'line',
+                view:15
+            }
+        }
+    });
+
+}
 
 Lampa.Listener.follow('app', function(e){
 
@@ -14,16 +33,13 @@ Lampa.Listener.follow('app', function(e){
 
         setTimeout(function(){
 
-            if(Lampa.Home){
+            Lampa.Api.partNext([
+                function(cb){
+                    historyRow(cb);
+                }
+            ],0);
 
-                Lampa.Home.add({
-                    title: 'Переглянуте',
-                    component: 'history_home'
-                });
-
-            }
-
-        },1500);
+        },1000);
 
     }
 
