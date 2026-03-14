@@ -879,7 +879,7 @@ function saveCachedMDBRating(id, value){
         } else {
 
             details.push(`
-                <div class="full-start__rate rate--tmdb">
+                <div class="full-start__rate rate--tmdb ${getRatingClass(vote)}">
                     <div>${vote}</div>
                     <div class="source--name">
                         <img src="https://raw.githubusercontent.com/wad218/lmp-rtg/main/wwwroot/tmdb.svg" style="height:19px;">
