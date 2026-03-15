@@ -16,38 +16,35 @@
             title: 'Історія перегляду',
             results: hist.slice(0, 20),
             type: 'movie',
-            id: 'history_row',
-            class: 'history-row' // Додаємо клас для стабільності
+            id: 'history_row'
         };
     }
 
     function start() {
-        if (window.history_row_plugin_final) return;
-        window.history_row_plugin_final = true;
+        if (window.history_row_inject_loaded) return;
+        window.history_row_inject_loaded = true;
 
-        let originalMain = Lampa.Api.sources.tmdb.main;
-
-        Lampa.Api.sources.tmdb.main = function (params, oncomplete, onerror) {
-            // Викликаємо оригінал
-            originalMain(params, function (data) {
-                let historyRow = getHistoryRow();
-
-                if (historyRow && Array.isArray(data)) {
-                    // Перевіряємо чи немає дублікатів
-                    data = data.filter(item => item.id !== 'history_row');
-                    
-                    // Додаємо історію на початок
-                    data.unshift(historyRow);
-                }
-
-                // ВАЖЛИВО: Використовуємо невеликий таймаут перед oncomplete. 
-                // Це дає Lampa час "зареєструвати" всі канали до того, як вона почне їх обрізати.
-                setTimeout(function() {
-                    oncomplete(data);
-                }, 10);
+        // Підписуємось на подію створення будь-якої активності (сторінки)
+        Lampa.Listener.follow('activity', function (e) {
+            // Перевіряємо, чи це головна сторінка TMDB
+            if (e.type === 'render' && e.component === 'full' && e.activity.component === 'main') {
                 
-            }, onerror);
-        };
+                let historyRow = getHistoryRow();
+                
+                if (historyRow && e.activity.render) {
+                    // Знаходимо контейнер з результатами на сторінці
+                    let result = e.activity.render().find('.items');
+                    
+                    // Якщо історія ще не додана, додаємо її ПІСЛЯ рендеру основних каналів
+                    if (!e.activity.history_added) {
+                        // Цей метод дозволяє Lampa додати рядок динамічно
+                        // Ми викликаємо оригінальний метод малювання рядка
+                        Lampa.Component.get('full').prototype.append.call(e.activity, historyRow);
+                        e.activity.history_added = true;
+                    }
+                }
+            }
+        });
     }
 
     if (window.appready) start();
