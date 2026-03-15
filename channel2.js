@@ -80,30 +80,28 @@ function startPlugin() {
             index: 0, 
             screen: ['main'],  
             call: (params, screen) => {
-    let all = Lampa.Favorite.all();
-    let history = all.history || [];
+                let all = Lampa.Favorite.all();
+                let history = all.history || [];
+                if (!history.length) return;
 
-    if (!history.length) return;
+                return function (call) {
+                    let results = history.slice(0, 20).map(item => {
+                        let ready = Lampa.Arrays.clone(item);
+                        ready.overview = item.overview || '';
+                        ready.description = item.overview || '';
+                        // Для Mi Box краще використовувати backdrop (широке фото)
+                        ready.background_image = item.img || item.backdrop_path || item.poster;
+                        return ready;
+                    });
 
-    return function(call) {
-        let results = history.slice(0, 20).map(item => {
-            let ready = Lampa.Arrays.clone(item);
-            // Копіюємо опис у поле description, яке часто використовується UI-модами
-            ready.description = item.overview || '';
-            ready.background_image = item.img || item.poster || item.backdrop_path;
-            return ready;
-        });
-
-        call({
-            results: results,
-            title: Lampa.Lang.translate('title_watched'),
-            card_events: true,
-            // Це важливо: додаємо клас, який дозволить тексту бути видимим
-            class: 'force-show-description',
-            // Кажемо системі, що опис має бути статичним
-            static: true,
-            // Додаємо опис самого каналу (деякі UI плагіни виводять його)
-            description: Lampa.Lang.translate('title_watched')
+                    call({
+                        results: results,
+                        title: Lampa.Lang.translate('title_watched'),
+                        card_events: true,
+                        line_type: 'wide', // Тільки wide показує опис на Mi Box
+                        static: true,
+                        lazy: false, // Вимикаємо ледаче завантаження для стабільності
+                        display: 'full' // Просимо повний режим відображення
         });
     }
 }  
