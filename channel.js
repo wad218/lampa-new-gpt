@@ -61,31 +61,31 @@ function startPlugin() {
             title: Lampa.Lang.translate('title_watched'),  
             index: 0, 
             screen: ['main'],  
-            call: (params, screen) => {
-    let all = Lampa.Favorite.all()
-    let history = all.history || []
+            call: (params, screen)=>{  
+                let all = Lampa.Favorite.all()  
+                let history = all.history || []  
+                  
+                if(!history.length) return  
+  
+                return function(call){  
+                    // Оптимізуємо дані для карток перед відправкою
+                    let results = history.slice(0, 20).map(item => {
+                        // Гарантуємо наявність постера для коректного відображення
+                        item.background_image = item.img || item.poster || item.backdrop_path;
+                        return item;
+                    });
 
-    if (!history.length) return
-
-    return function(call) {
-        let results = history.slice(0, 20).map(item => {
-            let ready = Lampa.Arrays.clone(item);
-            // Форсуємо наявність опису, якщо він чомусь порожній
-            ready.background_image = item.img || item.poster || item.backdrop_path;
-            return ready;
-        });
-
-        call({
-            results: results,
-            title: Lampa.Lang.translate('title_watched'),
-            card_events: true,
-            // Цей параметр змушує Lampa малювати "повну" версію рядка
-            static: true, 
-            // Додатково вказуємо тип для широких карток з текстом
-            type_line: 'wide' 
-        })
-    }
-}  
+                    call({  
+                        results: results,  
+                        title: Lampa.Lang.translate('title_watched'),
+                        // ВАЖЛИВО: card_events оживляє картки та робить їх стандартними
+                        card_events: true,
+                        // type_line: 'poster' // Можна розкоментувати для вертикальних постерів
+                    })  
+                }  
+            }  
+        })  
+    }  
   
     function add(){  
         let button = $(`<li class="menu__item selector">  
