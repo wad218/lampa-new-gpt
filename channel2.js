@@ -3,16 +3,16 @@
 
 if (typeof Lampa === 'undefined') return;
 
-function loadHistory(callback){
+function loadHistory(cb){
 
 let hist=[];
 
 try{
-let fav=Lampa.Favorite.all();
-if(fav && fav.history) hist=fav.history;
+let fav=Lampa.Favorite.all() || {};
+hist = fav.history || [];
 }catch(e){}
 
-callback({
+cb({
 title:'Історія перегляду',
 results:hist.slice(0,20)
 });
@@ -21,14 +21,12 @@ results:hist.slice(0,20)
 
 function start(){
 
-if(window.history_row_added) return;
-window.history_row_added=true;
+if(window.history_row_plugin) return;
+window.history_row_plugin=true;
 
 let originalMain = Lampa.Api.sources.tmdb.main;
 
 Lampa.Api.sources.tmdb.main = function(params,oncomplete,onerror){
-
-originalMain(params,function(data){
 
 let parts=[];
 
@@ -36,20 +34,11 @@ parts.push(function(cb){
 loadHistory(cb);
 });
 
-Lampa.Api.partNext(parts,1,function(extra){
-
-if(extra && extra.results){
-data.results.unshift({
-title:'Історія перегляду',
-results:extra.results
+parts.push(function(cb){
+originalMain(params,cb,onerror);
 });
-}
 
-oncomplete(data);
-
-},onerror);
-
-},onerror);
+Lampa.Api.partNext(parts,2,oncomplete,onerror);
 
 };
 
