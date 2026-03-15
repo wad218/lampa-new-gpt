@@ -4,40 +4,48 @@
     if (typeof Lampa === 'undefined') return;
 
     function start() {
-        if (window.history_row_replace_loaded) return;
-        window.history_row_replace_loaded = true;
+        if (window.history_row_replace_v5) return;
+        window.history_row_replace_v5 = true;
 
         let originalMain = Lampa.Api.sources.tmdb.main;
 
         Lampa.Api.sources.tmdb.main = function (params, oncomplete, onerror) {
             originalMain(params, function (data) {
                 try {
+                    // Отримуємо вашу історію
                     let fav = Lampa.Favorite.all() || {};
                     let hist = fav.history || [];
 
                     if (hist.length > 0 && Array.isArray(data)) {
-                        // Створюємо нашу секцію історії
-                        let historyRow = {
-                            title: 'Історія перегляду',
-                            results: hist.slice(0, 20),
-                            type: 'movie',
-                            id: 'history_row',
-                            card_events: true
-                        };
+                        // Шукаємо канал "Продовжити перегляд"
+                        // Він може мати назву 'Продовжити перегляд' або 'Продолжить просмотр'
+                        let index = data.findIndex(function(item) {
+                            return item.title === 'Продовжити перегляд' || 
+                                   item.title === 'Продолжить просмотр' ||
+                                   item.id === 'continue';
+                        });
 
-                        // ТРЮК: Замість додавання нового (що обрізає список), 
-                        // ми просто міняємо останній (5-й) або будь-який інший канал на Історію.
-                        // Або вставляємо і видаляємо останній, щоб довжина масиву не змінилася.
-                        
-                        data.unshift(historyRow); // Додали на початок
-                        if (data.length > 15) { 
-                            // Якщо каналів багато, просто залишаємо як є
+                        if (index !== -1) {
+                            // Якщо знайшли — міняємо його дані на ваші
+                            data[index].title = 'Історія перегляду';
+                            data[index].results = hist.slice(0, 20);
+                            // Важливо залишити оригінальні card_events, якщо вони були, або форсувати їх
+                            data[index].card_events = true;
                         } else {
-                            // Якщо Lampa прискіплива до кількості, можна видалити щось непотрібне в кінці
-                            // data.pop(); 
+                            // Якщо такий канал не знайдено (вимкнений в налаштуваннях), 
+                            // просто вставляємо на 2-ге місце без видалення, раптом проскочить
+                            data.splice(1, 0, {
+                                title: 'Історія перегляду',
+                                results: hist.slice(0, 20),
+                                type: 'movie',
+                                id: 'history_row',
+                                card_events: true
+                            });
                         }
                     }
-                } catch (e) {}
+                } catch (e) {
+                    console.log('History Plugin Error:', e);
+                }
 
                 oncomplete(data);
             }, onerror);
