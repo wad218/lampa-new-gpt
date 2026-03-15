@@ -3,7 +3,7 @@ function startPlugin() {
   
     let manifest = {  
         type: 'video',  
-        version: '1.0.0',  
+        version: '1.0.1',  
         name: Lampa.Lang.translate('title_watched'),  
         description: 'Shows watched movies and TV series',  
         component: 'watched'  
@@ -11,7 +11,7 @@ function startPlugin() {
       
     Lampa.Manifest.plugins = manifest  
   
-    // Компонент для відображення  
+    // Компонент для відображення повної сторінки
     function component(object){  
         let comp = new Lampa.InteractionMain(object)  
   
@@ -40,12 +40,12 @@ function startPlugin() {
         return comp  
     }  
   
-    // Додаємо контент на головний екран - ПЕРШИЙ канал  
+    // Додаємо контент на головний екран
     if(Lampa.Manifest.app_digital >= 300){  
         Lampa.ContentRows.add({  
             name: 'watched_main',  
             title: Lampa.Lang.translate('title_watched'),  
-            index: 0, // ПЕРШИЙ канал на головній  
+            index: 0, 
             screen: ['main'],  
             call: (params, screen)=>{  
                 let all = Lampa.Favorite.all()  
@@ -54,9 +54,19 @@ function startPlugin() {
                 if(!history.length) return  
   
                 return function(call){  
+                    // Оптимізуємо дані для карток перед відправкою
+                    let results = history.slice(0, 20).map(item => {
+                        // Гарантуємо наявність постера для коректного відображення
+                        item.background_image = item.img || item.poster || item.backdrop_path;
+                        return item;
+                    });
+
                     call({  
-                        results: history.slice(0, 20), // Об'єднаний список фільмів і серіалів  
-                        title: Lampa.Lang.translate('title_watched')  
+                        results: results,  
+                        title: Lampa.Lang.translate('title_watched'),
+                        // ВАЖЛИВО: card_events оживляє картки та робить їх стандартними
+                        card_events: true,
+                        // type_line: 'poster' // Можна розкоментувати для вертикальних постерів
                     })  
                 }  
             }  
@@ -67,8 +77,8 @@ function startPlugin() {
         let button = $(`<li class="menu__item selector">  
             <div class="menu__ico">  
                 <svg height="36" viewBox="0 0 38 36" fill="none" xmlns="http://www.w3.org/2000/svg">  
-                    <path d="M19 2C9.6 2 2 9.6 2 19s7.6 17 17 17 17-7.6 17-17S28.4 2 19 2zm0 30c-7.2 0-13-5.8-13-13s5.8-13 13-13 13 5.8 13 13-5.8 13-13 13z"/>  
-                    <path d="M15 14v10l8-5-8-5z"/>  
+                    <path d="M19 2C9.6 2 2 9.6 2 19s7.6 17 17 17 17-7.6 17-17S28.4 2 19 2zm0 30c-7.2 0-13-5.8-13-13s5.8-13 13-13 13 5.8 13 13-5.8 13-13 13z" fill="currentColor"/>  
+                    <path d="M15 14v10l8-5-8-5z" fill="currentColor"/>  
                 </svg>  
             </div>  
             <div class="menu__text">${manifest.name}</div>  
@@ -86,7 +96,6 @@ function startPlugin() {
         $('.menu .menu__list').eq(0).append(button)  
     }  
   
-    // Додаємо компонент  
     Lampa.Component.add('watched', component)  
   
     if(window.appready) add()  
