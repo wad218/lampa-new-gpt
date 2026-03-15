@@ -4,80 +4,46 @@
     if (typeof Lampa === 'undefined') return;
 
     function start() {
-        if (window.history_row_final_v4) return;
-        window.history_row_final_v4 = true;
+        if (window.history_row_plugin_final_fixed) return;
+        window.history_row_plugin_final_fixed = true;
 
-        // Створюємо функцію, яка буде малювати нашу стрічку
-        function addHistoryRow(object) {
-            let hist = [];
-            try {
-                let fav = Lampa.Favorite.all() || {};
-                hist = fav.history || [];
-            } catch (e) { }
+        // Перехоплюємо результат запиту до головної сторінки
+        Lampa.Listener.follow('api', function (e) {
+            if (e.type === 'complete' && e.name === 'tmdb_main') {
+                
+                // Отримуємо історію
+                let hist = [];
+                try {
+                    let fav = Lampa.Favorite.all() || {};
+                    hist = fav.history || [];
+                } catch (err) {}
 
-            if (hist.length > 0) {
-                let row = {
-                    title: 'Історія перегляду',
-                    results: hist.slice(0, 20),
-                    type: 'movie',
-                    id: 'history_row',
-                    card_events: true
-                };
+                if (hist.length > 0 && e.data && Array.isArray(e.data)) {
+                    // Перевіряємо, чи ми вже не вставили цей рядок
+                    if (!e.data.find(function(i) { return i.id === 'history_row' })) {
+                        
+                        // Створюємо об'єкт рядка
+                        let row = {
+                            title: 'Історія перегляду',
+                            results: hist.slice(0, 20),
+                            type: 'movie',
+                            id: 'history_row',
+                            card_events: true // Це активує кліки та фокус
+                        };
 
-                // Додаємо стрічку в кінець поточної активності
-                // Якщо ми на головній (main)
-                if (object.activity.component === 'main') {
-                    object.activity.render().find('.items').prepend(Lampa.Template.get('items_line', row));
-                    // Спеціальний виклик для ініціалізації карток, щоб вони натискалися
-                    Lampa.Controller.add('content', {
-                        toggle: function () {},
-                        up: function () {},
-                        down: function () {},
-                        right: function () {},
-                        left: function () {},
-                        back: function () {}
-                    });
+                        // ВАЖЛИВО: додаємо в масив, який Lampa вже "схвалила"
+                        e.data.unshift(row);
+                    }
                 }
             }
-        }
+        });
 
-        // Слухаємо подію повної готовності сторінки
-        Lampa.Listener.follow('full', function (e) {
-            if (e.type === 'complite' && e.activity.component === 'main') {
-                // Додаємо нашу історію ПІСЛЯ того, як Lampa вже все намалювала
-                // Використовуємо невелику затримку, щоб не заважати основному списку
+        // Додатковий хак: примусово оновлюємо контролер, щоб картки були активні
+        Lampa.Listener.follow('activity', function (e) {
+            if (e.type === 'render' && e.activity.component === 'main') {
                 setTimeout(function() {
-                    let hist = [];
-                    try {
-                        let fav = Lampa.Favorite.all() || {};
-                        hist = (fav.history || []).slice(0, 20);
-                    } catch (err) {}
-
-                    if (hist.length) {
-                        let line = Lampa.Template.get('items_line', {
-                            title: 'Історія перегляду',
-                            id: 'history_row'
-                        });
-
-                        line.find('.items').append(Lampa.Arrays.create(hist).map(function (item) {
-                            let card = Lampa.Template.get('card', item);
-                            card.on('click', function () {
-                                Lampa.Activity.push({
-                                    url: item.url,
-                                    title: item.title,
-                                    component: 'full',
-                                    id: item.id,
-                                    method: item.name ? 'tv' : 'movie',
-                                    card: item
-                                });
-                            });
-                            return card;
-                        }));
-
-                        // Вставляємо на самий початок контейнера
-                        e.activity.render().find('.items').prepend(line);
-                    }
-                }, 200);
+                    Lampa.Controller.render();
+                }, 100);
             }
         });
     }
