@@ -3,6 +3,21 @@ function startPlugin() {
 
     Lampa.Template.add('watched_style', `
         <style>
+        /* Примусово розширюємо висоту картки для тексту */
+.watched_main .card--wide .card__info {
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: flex-end !important;
+}
+
+.watched_main .card__description {
+    display: -webkit-box !important;
+    -webkit-line-clamp: 3 !important; /* Показувати 3 рядки тексту */
+    -webkit-box-orient: vertical !important;
+    overflow: hidden !important;
+    opacity: 0.8 !important;
+}
+
             /* Примусово показуємо опис для карток у нашому рядку */
             .watched_main .card__description {
                 display: block !important;
@@ -80,28 +95,36 @@ function startPlugin() {
             index: 0, 
             screen: ['main'],  
             call: (params, screen) => {
-                let all = Lampa.Favorite.all();
-                let history = all.history || [];
-                if (!history.length) return;
+    let all = Lampa.Favorite.all();
+    let history = all.history || [];
+    if (!history.length) return;
 
-                return function (call) {
-                    let results = history.slice(0, 20).map(item => {
-                        let ready = Lampa.Arrays.clone(item);
-                        ready.overview = item.overview || '';
-                        ready.description = item.overview || '';
-                        // Для Mi Box краще використовувати backdrop (широке фото)
-                        ready.background_image = item.img || item.backdrop_path || item.poster;
-                        return ready;
-                    });
+    return function (call) {
+        let results = history.slice(0, 20).map(item => {
+            let ready = Lampa.Arrays.clone(item);
+            
+            // 1. Дублюємо опис у всі можливі поля, які шукає ядро
+            ready.overview = item.overview || '';
+            ready.description = item.overview || '';
+            
+            // 2. Додаємо фейковий рейтинг, щоб картка вважалася "повною"
+            if(!ready.vote_average) ready.vote_average = item.vote_average || '0.0';
+            
+            ready.background_image = item.img || item.backdrop_path || item.poster;
+            return ready;
+        });
 
-                    call({
-                        results: results,
-                        title: Lampa.Lang.translate('title_watched'),
-                        card_events: true,
-                        line_type: 'wide', // Тільки wide показує опис на Mi Box
-                        static: true,
-                        lazy: false, // Вимикаємо ледаче завантаження для стабільності
-                        display: 'full' // Просимо повний режим відображення
+        call({
+            results: results,
+            title: Lampa.Lang.translate('title_watched'),
+            card_events: true,
+            
+            // 3. Параметри, що "обманюють" умови приховування опису
+            line_type: 'wide',
+            static: true,
+            type: 'movie', // Вказуємо тип 'movie', для нього опис пріоритетний
+            display: 'show',
+            hide_timeline: false // Залишаємо смужку прогресу, якщо це серіал
         });
     }
 }  
