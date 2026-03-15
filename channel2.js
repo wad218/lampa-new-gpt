@@ -6,7 +6,6 @@
     function getHistoryRow() {
         let hist = [];
         try {
-            // Отримуємо дані прямо з Favorite
             let fav = Lampa.Favorite.all() || {};
             hist = fav.history || [];
         } catch (e) { }
@@ -17,43 +16,42 @@
             title: 'Історія перегляду',
             results: hist.slice(0, 20),
             type: 'movie',
-            id: 'history_row'
+            id: 'history_row',
+            class: 'history-row' // Додаємо клас для стабільності
         };
     }
 
     function start() {
-        if (window.history_row_plugin_fixed) return;
-        window.history_row_plugin_fixed = true;
+        if (window.history_row_plugin_final) return;
+        window.history_row_plugin_final = true;
 
-        // Зберігаємо оригінал
         let originalMain = Lampa.Api.sources.tmdb.main;
 
         Lampa.Api.sources.tmdb.main = function (params, oncomplete, onerror) {
-            // Викликаємо оригінальну функцію TMDB
+            // Викликаємо оригінал
             originalMain(params, function (data) {
                 let historyRow = getHistoryRow();
-                
-                if (historyRow) {
-                    // Перевіряємо, чи дані прийшли як масив
-                    if (Array.isArray(data)) {
-                        // Перевіряємо, чи ми вже не додали історію
-                        let exists = data.find(i => i.id === 'history_row');
-                        if (!exists) data.unshift(historyRow);
-                    } else if (data && typeof data === 'object') {
-                        // Якщо це поодинокий об'єкт, перетворюємо на масив
-                        data = [historyRow, data];
-                    }
+
+                if (historyRow && Array.isArray(data)) {
+                    // Перевіряємо чи немає дублікатів
+                    data = data.filter(item => item.id !== 'history_row');
+                    
+                    // Додаємо історію на початок
+                    data.unshift(historyRow);
                 }
+
+                // ВАЖЛИВО: Використовуємо невеликий таймаут перед oncomplete. 
+                // Це дає Lampa час "зареєструвати" всі канали до того, як вона почне їх обрізати.
+                setTimeout(function() {
+                    oncomplete(data);
+                }, 10);
                 
-                // Повертаємо дані в Lampa
-                oncomplete(data);
             }, onerror);
         };
     }
 
-    // Запускаємо з невеликою затримкою, щоб Lampa встигла завантажити ядро
-    if (window.appready) setTimeout(start, 500);
+    if (window.appready) start();
     else Lampa.Listener.follow('app', function (e) {
-        if (e.type === 'ready') setTimeout(start, 500);
+        if (e.type === 'ready') start();
     });
 })();
