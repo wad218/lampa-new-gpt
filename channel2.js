@@ -89,7 +89,8 @@ function startPlugin() {
         });
     }
 }  
-  
+            });
+        }
     function add(){  
         let button = $(`<li class="menu__item selector">  
             <div class="menu__ico">  
