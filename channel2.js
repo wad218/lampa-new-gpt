@@ -3,54 +3,83 @@
 
     if (typeof Lampa === 'undefined') return;
 
-    function getHistoryRow() {
-        let hist = [];
-        try {
-            let fav = Lampa.Favorite.all() || {};
-            hist = fav.history || [];
-        } catch (e) { }
-
-        if (!hist || hist.length === 0) return null;
-
-        return {
-            title: 'Історія перегляду',
-            results: hist.slice(0, 20),
-            type: 'movie',
-            id: 'history_row',
-            // Додаємо важливі параметри для роботи карток
-            card_events: true 
-        };
-    }
-
     function start() {
-        if (window.history_row_plugin_position) return;
-        window.history_row_plugin_position = true;
+        if (window.history_row_final_v4) return;
+        window.history_row_final_v4 = true;
 
-        let originalMain = Lampa.Api.sources.tmdb.main;
+        // Створюємо функцію, яка буде малювати нашу стрічку
+        function addHistoryRow(object) {
+            let hist = [];
+            try {
+                let fav = Lampa.Favorite.all() || {};
+                hist = fav.history || [];
+            } catch (e) { }
 
-        Lampa.Api.sources.tmdb.main = function (params, oncomplete, onerror) {
-            
-            let myOnComplete = function (data) {
-                let historyRow = getHistoryRow();
-                
-                if (historyRow && Array.isArray(data)) {
-                    // Видаляємо дублікати, якщо вони є
-                    data = data.filter(i => i.id !== 'history_row');
-                    
-                    // Вставляємо на 3-тю позицію (індекс 2)
-                    // Якщо в масиві менше 2 елементів, splice просто додасть в кінець
-                    if (data.length > 2) {
-                        data.splice(2, 0, historyRow);
-                    } else {
-                        data.push(historyRow);
-                    }
+            if (hist.length > 0) {
+                let row = {
+                    title: 'Історія перегляду',
+                    results: hist.slice(0, 20),
+                    type: 'movie',
+                    id: 'history_row',
+                    card_events: true
+                };
+
+                // Додаємо стрічку в кінець поточної активності
+                // Якщо ми на головній (main)
+                if (object.activity.component === 'main') {
+                    object.activity.render().find('.items').prepend(Lampa.Template.get('items_line', row));
+                    // Спеціальний виклик для ініціалізації карток, щоб вони натискалися
+                    Lampa.Controller.add('content', {
+                        toggle: function () {},
+                        up: function () {},
+                        down: function () {},
+                        right: function () {},
+                        left: function () {},
+                        back: function () {}
+                    });
                 }
-                
-                oncomplete(data);
-            };
+            }
+        }
 
-            originalMain(params, myOnComplete, onerror);
-        };
+        // Слухаємо подію повної готовності сторінки
+        Lampa.Listener.follow('full', function (e) {
+            if (e.type === 'complite' && e.activity.component === 'main') {
+                // Додаємо нашу історію ПІСЛЯ того, як Lampa вже все намалювала
+                // Використовуємо невелику затримку, щоб не заважати основному списку
+                setTimeout(function() {
+                    let hist = [];
+                    try {
+                        let fav = Lampa.Favorite.all() || {};
+                        hist = (fav.history || []).slice(0, 20);
+                    } catch (err) {}
+
+                    if (hist.length) {
+                        let line = Lampa.Template.get('items_line', {
+                            title: 'Історія перегляду',
+                            id: 'history_row'
+                        });
+
+                        line.find('.items').append(Lampa.Arrays.create(hist).map(function (item) {
+                            let card = Lampa.Template.get('card', item);
+                            card.on('click', function () {
+                                Lampa.Activity.push({
+                                    url: item.url,
+                                    title: item.title,
+                                    component: 'full',
+                                    id: item.id,
+                                    method: item.name ? 'tv' : 'movie',
+                                    card: item
+                                });
+                            });
+                            return card;
+                        }));
+
+                        // Вставляємо на самий початок контейнера
+                        e.activity.render().find('.items').prepend(line);
+                    }
+                }, 200);
+            }
+        });
     }
 
     if (window.appready) start();
