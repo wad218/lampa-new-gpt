@@ -21,24 +21,28 @@ function startPlugin() {
             let all = Lampa.Favorite.all()  
             let history = all.history || []  
   
-            let results = history.slice(0, 50).map(item => {
-                let ready = Lampa.Arrays.clone(item);
-                // Обов'язково чистимо опис для бокового меню, щоб текст не накладався
-                ready.overview = ''; 
-                return ready;
+            // Створюємо глибоку копію і ПОВНІСТЮ видаляємо опис
+            let results = JSON.parse(JSON.stringify(history.slice(0, 50)));
+            
+            results.forEach(item => {
+                item.overview = ''; // Видаляємо текст
+                item.description = ''; // На всякий випадок видаляємо і це поле
+                // Якщо хочете ВЕРТИКАЛЬНІ картки, переконайтеся, що є poster
+                if(!item.poster) item.poster = item.img || item.backdrop_path;
             });
+
+            // Форсуємо тип відображення через object
+            object.type_line = 'poster'; 
 
             this.build({  
                 results: results,  
-                title: Lampa.Lang.translate('title_watched'),
-                // Вказуємо тип лінії для сітки в боковому меню
-                // 'poster' зробить їх вертикальними та чистими як у каталозі
-                line_type: 'poster' 
-            })  
-            
-            // Додатковий метод для примусового очищення стилів
-            this.render().find('.items').addClass('category-full');
+                title: Lampa.Lang.translate('title_watched')
+            })
 
+            // Примусово міняємо клас контейнера після рендеру
+            let items = this.render().find('.items');
+            items.removeClass('hide-info').addClass('category-full');
+            
             return this.render()  
         }  
   
