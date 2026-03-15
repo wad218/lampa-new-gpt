@@ -10,7 +10,7 @@
             hist = fav.history || [];
         } catch (e) { }
 
-        if (hist.length === 0) return null;
+        if (!hist.length) return null;
 
         return {
             title: 'Історія перегляду',
@@ -21,30 +21,27 @@
     }
 
     function start() {
-        if (window.history_row_plugin) return;
-        window.history_row_plugin = true;
+        // Захист від подвійного запуску
+        if (window.history_row_plugin_loaded) return;
+        window.history_row_plugin_loaded = true;
 
-        let originalMain = Lampa.Api.sources.tmdb.main;
-
-        Lampa.Api.sources.tmdb.main = function (params, oncomplete, onerror) {
-            originalMain(params, function (data) {
+        // Перехоплюємо саме метод формування головної сторінки
+        Lampa.Listener.follow('api', function (e) {
+            // Перевіряємо, чи це запит до головної сторінки TMDB
+            if (e.type === 'complete' && e.name === 'tmdb_main') {
                 let historyRow = getHistoryRow();
-
-                if (historyRow) {
-                    // Якщо data - це масив, ми додаємо історію на початок САМОГО ЦЬОГО масиву
-                    // Використовуємо unshift, щоб не створювати новий об'єкт масиву
-                    if (Array.isArray(data)) {
-                        data.unshift(historyRow);
-                    } else {
-                        // Якщо прийшов один об'єкт, перетворюємо його на масив
-                        data = [historyRow, data];
+                
+                if (historyRow && e.data) {
+                    // Перевіряємо, чи ми вже не додали історію (щоб не дублювати)
+                    let exists = e.data.find(item => item.id === 'history_row');
+                    
+                    if (!exists) {
+                        // Просто додаємо на початок масиву даних, які вже ПРИЙШЛИ від сервера
+                        e.data.unshift(historyRow);
                     }
                 }
-
-                // Повертаємо оригінальний (але модифікований) об'єкт data
-                oncomplete(data);
-            }, onerror);
-        };
+            }
+        });
     }
 
     if (window.appready) start();
