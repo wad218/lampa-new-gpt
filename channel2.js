@@ -1,5 +1,23 @@
 function startPlugin() {  
     window.plugin_watched_ready = true  
+
+    Lampa.Template.add('watched_style', `
+        <style>
+            /* Примусово показуємо опис для карток у нашому рядку */
+            .watched_main .card__description {
+                display: block !important;
+                opacity: 1 !important;
+                visibility: visible !important;
+                height: auto !important;
+                margin-top: 0.5rem !important;
+            }
+            /* Додатково для Mi Box: переконуємось, що контейнер не приховує текст */
+            .watched_main .card__info {
+                display: block !important;
+            }
+        </style>
+    `);
+    $('body').append(Lampa.Template.get('watched_style'));
   
     let manifest = {  
         type: 'video',  
