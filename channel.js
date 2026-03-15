@@ -11,7 +11,7 @@ function startPlugin() {
       
     Lampa.Manifest.plugins = manifest  
   
-    // Компонент для відображення повної сторінки
+      // Компонент для відображення сторінки з бокового меню
     function component(object){  
         let comp = new Lampa.InteractionMain(object)  
   
@@ -21,10 +21,22 @@ function startPlugin() {
             let all = Lampa.Favorite.all()  
             let history = all.history || []  
   
+            // Очищуємо результати від зайвого тексту, який лізе на картки
+            let results = history.slice(0, 50).map(item => {
+                let ready = Lampa.Arrays.clone(item);
+                // Якщо ми хочемо чисті картки без тексту опису зверху:
+                // ready.overview = ''; 
+                return ready;
+            });
+
             this.build({  
-                results: history.slice(0, 50),  
+                results: results,  
                 title: Lampa.Lang.translate('title_watched')  
             })  
+            
+            // Після побудови (build) додаємо клас, щоб Lampa знала як малювати
+            this.render().find('.items').addClass('category-full'); // Це зробить сітку стандартною
+
             return this.render()  
         }  
   
@@ -38,7 +50,7 @@ function startPlugin() {
         }  
   
         return comp  
-    }  
+    }
   
     // Додаємо контент на головний екран
     if(Lampa.Manifest.app_digital >= 300){  
