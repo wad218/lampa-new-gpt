@@ -3,56 +3,50 @@
 
     if (typeof Lampa === 'undefined') return;
 
-    function loadHistory(cb) {
+    function getHistoryRow() {
         let hist = [];
         try {
-            // Отримуємо історію з Favorite
             let fav = Lampa.Favorite.all() || {};
             hist = fav.history || [];
         } catch (e) { }
 
-        // Повертаємо об'єкт секції
-        cb({
+        if (hist.length === 0) return null; // Не повертаємо порожню стрічку
+
+        return {
             title: 'Історія перегляду',
             results: hist.slice(0, 20),
-            type: 'movie' // бажано вказати тип для коректного відображення
-        });
+            type: 'movie'
+        };
     }
 
     function start() {
         if (window.history_row_plugin) return;
         window.history_row_plugin = true;
 
+        // Зберігаємо оригінальну функцію TMDB
         let originalMain = Lampa.Api.sources.tmdb.main;
 
         Lampa.Api.sources.tmdb.main = function (params, oncomplete, onerror) {
-            let parts = [];
-
-            // 1. Додаємо історію
-            parts.push(function (cb) {
-                loadHistory(cb);
-            });
-
-            // 2. Додаємо стандартний контент
-            parts.push(function (cb) {
-                originalMain(params, function (data) {
-                    // Якщо originalMain повертає масив секцій, передаємо його далі
-                    cb(data);
-                }, onerror);
-            });
-
-            // Використовуємо ліміт частин. 
-            // В Lampa partNext збирає результати в один масив.
-            Lampa.Api.partNext(parts, parts.length, function (result) {
-                // result буде масивом, де [0] - це історія, а [1] - масив від TMDB
-                // Нам треба "розгладити" (flatten) цей масив
-                let merged = [];
-                result.forEach(item => {
-                    if (Array.isArray(item)) merged = merged.concat(item);
-                    else merged.push(item);
-                });
+            // Викликаємо оригінальний TMDB
+            originalMain(params, function (data) {
+                let historyRow = getHistoryRow();
                 
-                oncomplete(merged);
+                let result = [];
+                
+                // Якщо історія є, додаємо її першою
+                if (historyRow) {
+                    result.push(historyRow);
+                }
+
+                // Додаємо всі стандартні канали TMDB (вони вже в масиві data)
+                if (Array.isArray(data)) {
+                    result = result.concat(data);
+                } else {
+                    result.push(data);
+                }
+
+                // Повертаємо об'єднаний масив
+                oncomplete(result);
             }, onerror);
         };
     }
