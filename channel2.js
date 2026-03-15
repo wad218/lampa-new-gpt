@@ -67,20 +67,26 @@ function startPlugin() {
                   
                 if(!history.length) return  
   
-                return function(call){  
-                    // Оптимізуємо дані для карток перед відправкою
-                    let results = history.slice(0, 20).map(item => {
-                        // Гарантуємо наявність постера для коректного відображення
-                        item.background_image = item.img || item.poster || item.backdrop_path;
-                        return item;
-                    });
+                // ... всередині Lampa.ContentRows.add -> call ...
+return function(call){  
+    let results = history.slice(0, 20).map(item => {
+        let ready = Lampa.Arrays.clone(item); // Краще клонувати, щоб не псувати оригінал
+        
+        // Гарантуємо наявність зображення для горизонтального відображення
+        ready.background_image = item.img || item.backdrop_path || item.poster;
+        
+        // Додаємо примусовий тип картки, якщо його немає
+        if(!ready.type) ready.type = 'movie'; 
+        
+        return ready;
+    });
 
-                    call({  
-                        results: results,  
-                        title: Lampa.Lang.translate('title_watched'),
-                        // ВАЖЛИВО: card_events оживляє картки та робить їх стандартними
-                        card_events: true,
-                        // type_line: 'poster' // Можна розкоментувати для вертикальних постерів
+    call({  
+        results: results,  
+        title: Lampa.Lang.translate('title_watched'),
+        card_events: true,
+        // Додайте цей параметр, щоб примусово сказати системі малювати широкі картки
+        type_line: 'wide'
                     })  
                 }  
             }  
