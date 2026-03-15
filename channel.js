@@ -21,21 +21,23 @@ function startPlugin() {
             let all = Lampa.Favorite.all()  
             let history = all.history || []  
   
-            // Очищуємо результати від зайвого тексту, який лізе на картки
             let results = history.slice(0, 50).map(item => {
                 let ready = Lampa.Arrays.clone(item);
-                // Якщо ми хочемо чисті картки без тексту опису зверху:
-                // ready.overview = ''; 
+                // Обов'язково чистимо опис для бокового меню, щоб текст не накладався
+                ready.overview = ''; 
                 return ready;
             });
 
             this.build({  
                 results: results,  
-                title: Lampa.Lang.translate('title_watched')  
+                title: Lampa.Lang.translate('title_watched'),
+                // Вказуємо тип лінії для сітки в боковому меню
+                // 'poster' зробить їх вертикальними та чистими як у каталозі
+                line_type: 'poster' 
             })  
             
-            // Після побудови (build) додаємо клас, щоб Lampa знала як малювати
-            this.render().find('.items').addClass('category-full'); // Це зробить сітку стандартною
+            // Додатковий метод для примусового очищення стилів
+            this.render().find('.items').addClass('category-full');
 
             return this.render()  
         }  
