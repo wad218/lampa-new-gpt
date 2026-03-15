@@ -10,7 +10,7 @@
             hist = fav.history || [];
         } catch (e) { }
 
-        if (!hist.length) return null;
+        if (!hist || hist.length === 0) return null;
 
         return {
             title: 'Історія перегляду',
@@ -21,32 +21,34 @@
     }
 
     function start() {
-        if (window.history_row_inject_loaded) return;
-        window.history_row_inject_loaded = true;
+        if (window.history_row_plugin_final_v3) return;
+        window.history_row_plugin_final_v3 = true;
 
-        // Підписуємось на подію створення будь-якої активності (сторінки)
-        Lampa.Listener.follow('activity', function (e) {
-            // Перевіряємо, чи це головна сторінка TMDB
-            if (e.type === 'render' && e.component === 'full' && e.activity.component === 'main') {
-                
+        let originalMain = Lampa.Api.sources.tmdb.main;
+
+        Lampa.Api.sources.tmdb.main = function (params, oncomplete, onerror) {
+            // Створюємо власну функцію-обробник результату
+            let myOnComplete = function (data) {
                 let historyRow = getHistoryRow();
                 
-                if (historyRow && e.activity.render) {
-                    // Знаходимо контейнер з результатами на сторінці
-                    let result = e.activity.render().find('.items');
-                    
-                    // Якщо історія ще не додана, додаємо її ПІСЛЯ рендеру основних каналів
-                    if (!e.activity.history_added) {
-                        // Цей метод дозволяє Lampa додати рядок динамічно
-                        // Ми викликаємо оригінальний метод малювання рядка
-                        Lampa.Component.get('full').prototype.append.call(e.activity, historyRow);
-                        e.activity.history_added = true;
+                if (historyRow && Array.isArray(data)) {
+                    // Перевіряємо, чи немає нас вже в списку
+                    if (!data.find(i => i.id === 'history_row')) {
+                        // Вставляємо історію на перше місце
+                        data.unshift(historyRow);
                     }
                 }
-            }
-        });
+                
+                // ВІДДАЄМО ДАНІ ЯК Є
+                oncomplete(data);
+            };
+
+            // Викликаємо оригінальний TMDB, але передаємо йому НАШУ функцію завершення
+            originalMain(params, myOnComplete, onerror);
+        };
     }
 
+    // Запуск без затримок, але з перевіркою ready
     if (window.appready) start();
     else Lampa.Listener.follow('app', function (e) {
         if (e.type === 'ready') start();
