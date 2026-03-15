@@ -3,50 +3,49 @@
 
 if (typeof Lampa === 'undefined') return;
 
-function loadHistory(cb){
+function loadHistory(){
+    let hist = [];
+    try{
+        let fav = Lampa.Favorite.all() || {};
+        hist = fav.history || [];
+    }catch(e){}
 
-let hist=[];
-
-try{
-let fav=Lampa.Favorite.all() || {};
-hist = fav.history || [];
-}catch(e){}
-
-cb({
-title:'Історія перегляду',
-results:hist.slice(0,20)
-});
-
+    return {
+        title: 'Історія перегляду',
+        results: hist.slice(0,20)
+    };
 }
 
 function start(){
 
-if(window.history_row_plugin) return;
-window.history_row_plugin=true;
+    if(window.history_row_plugin) return;
+    window.history_row_plugin = true;
 
-let originalMain = Lampa.Api.sources.tmdb.main;
+    const originalMain = Lampa.Api.sources.tmdb.main;
 
-Lampa.Api.sources.tmdb.main = function(params,oncomplete,onerror){
+    Lampa.Api.sources.tmdb.main = function(params,oncomplete,onerror){
 
-let parts=[];
+        originalMain(params,function(data){
 
-parts.push(function(cb){
-loadHistory(cb);
-});
+            let historyRow = loadHistory();
 
-parts.push(function(cb){
-originalMain(params,cb,onerror);
-});
+            if(historyRow.results.length){
+                if(!data.results) data.results = [];
 
-Lampa.Api.partNext(parts,2,oncomplete,onerror);
+                data.results.unshift(historyRow);
+            }
 
-};
+            oncomplete(data);
+
+        },onerror);
+
+    };
 
 }
 
 if(window.appready) start();
 else Lampa.Listener.follow('app',function(e){
-if(e.type==='ready') start();
+    if(e.type === 'ready') start();
 });
 
 })();
