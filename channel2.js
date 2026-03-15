@@ -6,6 +6,7 @@
     function getHistoryRow() {
         let hist = [];
         try {
+            // Отримуємо дані прямо з Favorite
             let fav = Lampa.Favorite.all() || {};
             hist = fav.history || [];
         } catch (e) { }
@@ -21,31 +22,38 @@
     }
 
     function start() {
-        // Захист від подвійного запуску
-        if (window.history_row_plugin_loaded) return;
-        window.history_row_plugin_loaded = true;
+        if (window.history_row_plugin_fixed) return;
+        window.history_row_plugin_fixed = true;
 
-        // Перехоплюємо саме метод формування головної сторінки
-        Lampa.Listener.follow('api', function (e) {
-            // Перевіряємо, чи це запит до головної сторінки TMDB
-            if (e.type === 'complete' && e.name === 'tmdb_main') {
+        // Зберігаємо оригінал
+        let originalMain = Lampa.Api.sources.tmdb.main;
+
+        Lampa.Api.sources.tmdb.main = function (params, oncomplete, onerror) {
+            // Викликаємо оригінальну функцію TMDB
+            originalMain(params, function (data) {
                 let historyRow = getHistoryRow();
                 
-                if (historyRow && e.data) {
-                    // Перевіряємо, чи ми вже не додали історію (щоб не дублювати)
-                    let exists = e.data.find(item => item.id === 'history_row');
-                    
-                    if (!exists) {
-                        // Просто додаємо на початок масиву даних, які вже ПРИЙШЛИ від сервера
-                        e.data.unshift(historyRow);
+                if (historyRow) {
+                    // Перевіряємо, чи дані прийшли як масив
+                    if (Array.isArray(data)) {
+                        // Перевіряємо, чи ми вже не додали історію
+                        let exists = data.find(i => i.id === 'history_row');
+                        if (!exists) data.unshift(historyRow);
+                    } else if (data && typeof data === 'object') {
+                        // Якщо це поодинокий об'єкт, перетворюємо на масив
+                        data = [historyRow, data];
                     }
                 }
-            }
-        });
+                
+                // Повертаємо дані в Lampa
+                oncomplete(data);
+            }, onerror);
+        };
     }
 
-    if (window.appready) start();
+    // Запускаємо з невеликою затримкою, щоб Lampa встигла завантажити ядро
+    if (window.appready) setTimeout(start, 500);
     else Lampa.Listener.follow('app', function (e) {
-        if (e.type === 'ready') start();
+        if (e.type === 'ready') setTimeout(start, 500);
     });
 })();
