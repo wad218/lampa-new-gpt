@@ -4,48 +4,44 @@
     if (typeof Lampa === 'undefined') return;
 
     function start() {
-        if (window.history_row_plugin_final_fixed) return;
-        window.history_row_plugin_final_fixed = true;
+        if (window.history_row_replace_loaded) return;
+        window.history_row_replace_loaded = true;
 
-        // Перехоплюємо результат запиту до головної сторінки
-        Lampa.Listener.follow('api', function (e) {
-            if (e.type === 'complete' && e.name === 'tmdb_main') {
-                
-                // Отримуємо історію
-                let hist = [];
+        let originalMain = Lampa.Api.sources.tmdb.main;
+
+        Lampa.Api.sources.tmdb.main = function (params, oncomplete, onerror) {
+            originalMain(params, function (data) {
                 try {
                     let fav = Lampa.Favorite.all() || {};
-                    hist = fav.history || [];
-                } catch (err) {}
+                    let hist = fav.history || [];
 
-                if (hist.length > 0 && e.data && Array.isArray(e.data)) {
-                    // Перевіряємо, чи ми вже не вставили цей рядок
-                    if (!e.data.find(function(i) { return i.id === 'history_row' })) {
-                        
-                        // Створюємо об'єкт рядка
-                        let row = {
+                    if (hist.length > 0 && Array.isArray(data)) {
+                        // Створюємо нашу секцію історії
+                        let historyRow = {
                             title: 'Історія перегляду',
                             results: hist.slice(0, 20),
                             type: 'movie',
                             id: 'history_row',
-                            card_events: true // Це активує кліки та фокус
+                            card_events: true
                         };
 
-                        // ВАЖЛИВО: додаємо в масив, який Lampa вже "схвалила"
-                        e.data.unshift(row);
+                        // ТРЮК: Замість додавання нового (що обрізає список), 
+                        // ми просто міняємо останній (5-й) або будь-який інший канал на Історію.
+                        // Або вставляємо і видаляємо останній, щоб довжина масиву не змінилася.
+                        
+                        data.unshift(historyRow); // Додали на початок
+                        if (data.length > 15) { 
+                            // Якщо каналів багато, просто залишаємо як є
+                        } else {
+                            // Якщо Lampa прискіплива до кількості, можна видалити щось непотрібне в кінці
+                            // data.pop(); 
+                        }
                     }
-                }
-            }
-        });
+                } catch (e) {}
 
-        // Додатковий хак: примусово оновлюємо контролер, щоб картки були активні
-        Lampa.Listener.follow('activity', function (e) {
-            if (e.type === 'render' && e.activity.component === 'main') {
-                setTimeout(function() {
-                    Lampa.Controller.render();
-                }, 100);
-            }
-        });
+                oncomplete(data);
+            }, onerror);
+        };
     }
 
     if (window.appready) start();
