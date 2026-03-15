@@ -97,4 +97,4 @@ function startPlugin() {
     }  
 }  
   
-if(!window.plugin_watched_ready && L
+if(!window.plugin_watched_ready && Lampa.Manifest.app_digital >= 242) startPlugin()
