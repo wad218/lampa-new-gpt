@@ -1,51 +1,64 @@
 (function () {
-'use strict';
+    'use strict';
 
-if (typeof Lampa === 'undefined') return;
+    if (typeof Lampa === 'undefined') return;
 
-function loadHistory(){
-    let hist = [];
-    try{
-        let fav = Lampa.Favorite.all() || {};
-        hist = fav.history || [];
-    }catch(e){}
+    function loadHistory(cb) {
+        let hist = [];
+        try {
+            // Отримуємо історію з Favorite
+            let fav = Lampa.Favorite.all() || {};
+            hist = fav.history || [];
+        } catch (e) { }
 
-    return {
-        title: 'Історія перегляду',
-        results: hist.slice(0,20)
-    };
-}
+        // Повертаємо об'єкт секції
+        cb({
+            title: 'Історія перегляду',
+            results: hist.slice(0, 20),
+            type: 'movie' // бажано вказати тип для коректного відображення
+        });
+    }
 
-function start(){
+    function start() {
+        if (window.history_row_plugin) return;
+        window.history_row_plugin = true;
 
-    if(window.history_row_plugin) return;
-    window.history_row_plugin = true;
+        let originalMain = Lampa.Api.sources.tmdb.main;
 
-    const originalMain = Lampa.Api.sources.tmdb.main;
+        Lampa.Api.sources.tmdb.main = function (params, oncomplete, onerror) {
+            let parts = [];
 
-    Lampa.Api.sources.tmdb.main = function(params,oncomplete,onerror){
+            // 1. Додаємо історію
+            parts.push(function (cb) {
+                loadHistory(cb);
+            });
 
-        originalMain(params,function(data){
+            // 2. Додаємо стандартний контент
+            parts.push(function (cb) {
+                originalMain(params, function (data) {
+                    // Якщо originalMain повертає масив секцій, передаємо його далі
+                    cb(data);
+                }, onerror);
+            });
 
-            let historyRow = loadHistory();
+            // Використовуємо ліміт частин. 
+            // В Lampa partNext збирає результати в один масив.
+            Lampa.Api.partNext(parts, parts.length, function (result) {
+                // result буде масивом, де [0] - це історія, а [1] - масив від TMDB
+                // Нам треба "розгладити" (flatten) цей масив
+                let merged = [];
+                result.forEach(item => {
+                    if (Array.isArray(item)) merged = merged.concat(item);
+                    else merged.push(item);
+                });
+                
+                oncomplete(merged);
+            }, onerror);
+        };
+    }
 
-            if(historyRow.results.length){
-                if(!data.results) data.results = [];
-
-                data.results.unshift(historyRow);
-            }
-
-            oncomplete(data);
-
-        },onerror);
-
-    };
-
-}
-
-if(window.appready) start();
-else Lampa.Listener.follow('app',function(e){
-    if(e.type === 'ready') start();
-});
-
+    if (window.appready) start();
+    else Lampa.Listener.follow('app', function (e) {
+        if (e.type === 'ready') start();
+    });
 })();
