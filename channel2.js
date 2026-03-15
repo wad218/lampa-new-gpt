@@ -10,12 +10,14 @@
             hist = fav.history || [];
         } catch (e) { }
 
-        if (hist.length === 0) return null; // Не повертаємо порожню стрічку
+        if (hist.length === 0) return null;
 
         return {
             title: 'Історія перегляду',
             results: hist.slice(0, 20),
-            type: 'movie'
+            type: 'movie',
+            // Додаємо ідентифікатор, щоб Lampa не плутала цей канал з іншими
+            id: 'history_row' 
         };
     }
 
@@ -23,30 +25,28 @@
         if (window.history_row_plugin) return;
         window.history_row_plugin = true;
 
-        // Зберігаємо оригінальну функцію TMDB
         let originalMain = Lampa.Api.sources.tmdb.main;
 
         Lampa.Api.sources.tmdb.main = function (params, oncomplete, onerror) {
-            // Викликаємо оригінальний TMDB
             originalMain(params, function (data) {
                 let historyRow = getHistoryRow();
-                
-                let result = [];
-                
-                // Якщо історія є, додаємо її першою
+                let finalResult = [];
+
+                // Додаємо історію на перше місце
                 if (historyRow) {
-                    result.push(historyRow);
+                    finalResult.push(historyRow);
                 }
 
-                // Додаємо всі стандартні канали TMDB (вони вже в масиві data)
+                // Додаємо абсолютно ВСІ канали, які прийшли від TMDB
                 if (Array.isArray(data)) {
-                    result = result.concat(data);
-                } else {
-                    result.push(data);
+                    // Використовуємо розширення масиву, щоб нічого не загубити
+                    finalResult = finalResult.concat(data);
+                } else if (data && typeof data === 'object') {
+                    finalResult.push(data);
                 }
 
-                // Повертаємо об'єднаний масив
-                oncomplete(result);
+                // ВАЖЛИВО: передаємо масив далі без обрізки
+                oncomplete(finalResult);
             }, onerror);
         };
     }
